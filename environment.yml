@@ -1,0 +1,14 @@
+name: social_scoring
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - django=4.2
+  - pytest=7.4
+  - pytest-django=4.5
+  - coverage=7.3
+  - pip
+  - pip:
+    # Add any pip-only packages here if needed in the future
+    # - some-pip-only-package

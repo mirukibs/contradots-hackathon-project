@@ -1,0 +1,352 @@
+@startuml ApplicationLayer
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+title Application Layer - CQRS Architecture (Orchestrates Domain Logic)
+
+' =======================
+' APPLICATION SERVICES
+' =======================
+package "Application Services" <<Cloud>> {
+    
+    class PersonApplicationService {
+        +registerPerson(command: RegisterPersonCommand) : PersonId
+        +getPersonProfile(personId: PersonId) : PersonProfileDto
+        +getLeaderboard() : LeaderboardDto[]
+        -personRepo : PersonRepository
+        -leaderboardQueryRepo : LeaderboardQueryRepository
+    }
+    
+    class ActivityApplicationService {
+        +createActivity(command: CreateActivityCommand) : ActivityId
+        +getActiveActivities() : ActivityDto[]
+        +getActivityDetails(activityId: ActivityId) : ActivityDetailsDto
+        +deactivateActivity(command: DeactivateActivityCommand) : void
+        -activityRepo : ActivityRepository
+        -activityQueryRepo : ActivityQueryRepository
+        -personRepo : PersonRepository
+    }
+    
+    class ActionApplicationService {
+        +submitAction(command: SubmitActionCommand) : ActionId
+        +getPendingValidations() : ActionDto[]
+        +getPersonActions(personId: PersonId) : ActionDto[]
+        +simulateProofValidation(command: ValidateProofCommand) : void
+        -actionRepo : ActionRepository
+        -actionQueryRepo : ActionQueryRepository
+        -activityRepo : ActivityRepository
+        -eventPublisher : EventPublisher
+    }
+}
+
+' =======================
+' COMMAND OBJECTS (Input)
+' =======================
+package "Commands" <<Folder>> {
+    class RegisterPersonCommand {
+        +name : string
+        +email : string
+        +role : string
+        +validate() : void
+    }
+    
+    class CreateActivityCommand {
+        +name : string
+        +description : string
+        +points : int
+        +leadId : PersonId
+        +validate() : void
+    }
+    
+    class SubmitActionCommand {
+        +personId : PersonId
+        +activityId : ActivityId
+        +description : string
+        +proofHash : string
+        +validate() : void
+    }
+    
+    class DeactivateActivityCommand {
+        +activityId : ActivityId
+        +leadId : PersonId
+        +validate() : void
+    }
+    
+    class ValidateProofCommand {
+        +actionId : ActionId
+        +isValid : boolean
+        +validate() : void
+    }
+}
+
+' =======================
+' DTO OBJECTS (Output)  
+' =======================
+package "DTOs" <<Folder>> {
+    class PersonProfileDto {
+        +personId : string
+        +name : string
+        +email : string
+        +role : string
+        +reputationScore : int
+    }
+    
+    class LeaderboardDto {
+        +personId : string
+        +name : string
+        +reputationScore : int
+        +rank : int
+    }
+    
+    class ActivityDto {
+        +activityId : string
+        +name : string
+        +description : string
+        +points : int
+        +leadName : string
+        +isActive : boolean
+    }
+    
+    class ActivityDetailsDto {
+        +activityId : string
+        +name : string
+        +description : string
+        +points : int
+        +leadName : string
+        +isActive : boolean
+        +participantCount : int
+        +totalActionsSubmitted : int
+    }
+    
+    class ActionDto {
+        +actionId : string
+        +personName : string
+        +activityName : string
+        +description : string
+        +status : string
+        +submittedAt : string
+    }
+}
+
+' =======================
+' CQRS REPOSITORIES
+' =======================
+package "Command Side (Write)" <<Database>> {
+    interface PersonRepository {
+        +findById(personId : PersonId) : Person
+        +save(person : Person) : void
+        +findAll() : Person[]
+    }
+    
+    interface ActivityRepository {
+        +findById(activityId : ActivityId) : Activity
+        +save(activity : Activity) : void
+        +findActive() : Activity[]
+        +findByLeadId(leadId : PersonId) : Activity[]
+    }
+    
+    interface ActionRepository {
+        +findById(actionId : ActionId) : Action
+        +save(action : Action) : void
+        +findPendingValidation() : Action[]
+        +findByPersonId(personId : PersonId) : Action[]
+        +findByActivityId(activityId : ActivityId) : Action[]
+    }
+}
+
+package "Query Side (Read)" <<Storage>> {
+    interface LeaderboardQueryRepository {
+        +getLeaderboard() : LeaderboardDto[]
+        +getPersonRank(personId : PersonId) : int
+    }
+    
+    interface ActivityQueryRepository {
+        +getActiveActivities() : ActivityDto[]
+        +getActivityDetails(activityId : ActivityId) : ActivityDetailsDto
+    }
+    
+    interface ActionQueryRepository {
+        +getPendingValidations() : ActionDto[]
+        +getPersonActions(personId : PersonId) : ActionDto[]
+        +getActivityActions(activityId : ActivityId) : ActionDto[]
+    }
+}
+
+' =======================
+' EVENT INFRASTRUCTURE
+' =======================
+package "Event Infrastructure" <<Component>> {
+    interface EventStore {
+        +append(aggregateId : UUID, events : DomainEvent[]) : void
+        +getEvents(aggregateId : UUID) : DomainEvent[]
+        +getAllEvents() : DomainEvent[]
+    }
+    
+    interface EventPublisher {
+        +publish(event : DomainEvent) : void
+        +publishAll(events : DomainEvent[]) : void
+        -eventStore : EventStore
+        -handlers : EventHandler[]
+    }
+    
+    interface EventHandler<T extends DomainEvent> {
+        +handle(event : T) : void
+        +canHandle(event : DomainEvent) : boolean
+    }
+}
+
+' =======================
+' DOMAIN EVENTS (Same as Domain Layer)
+' =======================
+package "Domain Events" <<Node>> {
+    abstract class DomainEvent {
+        +eventId : UUID
+        +occurredAt : DateTime
+        +aggregateId : UUID
+        +aggregateType : string
+    }
+    
+    class ActionSubmittedEvent extends DomainEvent {
+        +actionId : ActionId
+        +personId : PersonId
+        +activityId : ActivityId
+        +description : string
+        +proofHash : string
+    }
+    
+    class ProofValidatedEvent extends DomainEvent {
+        +actionId : ActionId
+        +personId : PersonId
+        +activityId : ActivityId
+        +isValid : boolean
+    }
+}
+
+' =======================
+' EVENT HANDLERS (Bridge Domain & Application)
+' =======================
+package "Event Handlers" <<Component>> {
+    class ReputationEventHandler implements EventHandler {
+        +handle(event : ActionSubmittedEvent) : void
+        +handle(event : ProofValidatedEvent) : void
+        +canHandle(event : DomainEvent) : boolean
+        -personRepo : PersonRepository
+        -activityRepo : ActivityRepository
+        -reputationService : ReputationService
+    }
+    
+    class LeaderboardProjectionHandler implements EventHandler {
+        +handle(event : ActionSubmittedEvent) : void
+        +handle(event : ProofValidatedEvent) : void
+        +canHandle(event : DomainEvent) : boolean
+        -leaderboardRepo : LeaderboardQueryRepository
+    }
+    
+    class ActivityProjectionHandler implements EventHandler {
+        +handle(event : ActionSubmittedEvent) : void
+        +canHandle(event : DomainEvent) : boolean
+        -activityQueryRepo : ActivityQueryRepository
+    }
+}
+
+' =======================
+' DOMAIN SERVICES (From Domain Layer)
+' =======================
+package "Domain Services" <<Component>> {
+    class ReputationService {
+        +calculatePoints(activityId : ActivityId) : int
+        +updatePersonReputation(personId : PersonId, points : int) : void
+    }
+}
+
+' =======================
+' APPLICATION SERVICE USAGE
+' =======================
+
+' Commands → Application Services
+PersonApplicationService ..> RegisterPersonCommand : "validates & processes"
+ActivityApplicationService ..> CreateActivityCommand : "validates & processes"  
+ActivityApplicationService ..> DeactivateActivityCommand : "validates & processes"
+ActionApplicationService ..> SubmitActionCommand : "validates & processes"
+ActionApplicationService ..> ValidateProofCommand : "validates & processes"
+
+' Application Services → DTOs  
+PersonApplicationService ..> PersonProfileDto : "returns"
+PersonApplicationService ..> LeaderboardDto : "returns"
+ActivityApplicationService ..> ActivityDto : "returns"
+ActivityApplicationService ..> ActivityDetailsDto : "returns"
+ActionApplicationService ..> ActionDto : "returns"
+
+' CQRS Repository Usage
+PersonApplicationService ..> PersonRepository : "write operations"
+PersonApplicationService ..> LeaderboardQueryRepository : "read operations"
+ActivityApplicationService ..> ActivityRepository : "write operations"
+ActivityApplicationService ..> ActivityQueryRepository : "read operations"
+ActionApplicationService ..> ActionRepository : "write operations"
+ActionApplicationService ..> ActionQueryRepository : "read operations"
+
+' Event Publishing
+ActionApplicationService ..> EventPublisher : "publishes events"
+
+' =======================
+' EVENT-DRIVEN FLOW
+' =======================
+
+' Domain Events Published
+ActionApplicationService ..> ActionSubmittedEvent : "publishes on action submit"
+ActionApplicationService ..> ProofValidatedEvent : "publishes on proof validation"
+
+' Event Handling  
+ActionSubmittedEvent ..> ReputationEventHandler : "triggers domain update"
+ActionSubmittedEvent ..> LeaderboardProjectionHandler : "triggers read projection"
+ActionSubmittedEvent ..> ActivityProjectionHandler : "triggers read projection"
+
+ProofValidatedEvent ..> ReputationEventHandler : "triggers domain update"
+ProofValidatedEvent ..> LeaderboardProjectionHandler : "triggers read projection"
+
+' Event Handlers → Repositories
+ReputationEventHandler ..> PersonRepository : "updates domain state"
+ReputationEventHandler ..> ActivityRepository : "reads activity data"
+ReputationEventHandler ..> ReputationService : "calculates points"
+
+LeaderboardProjectionHandler ..> LeaderboardQueryRepository : "updates projections"
+ActivityProjectionHandler ..> ActivityQueryRepository : "updates projections"
+
+' Infrastructure
+EventPublisher ..> EventStore : "persists events"
+EventPublisher ..> EventHandler : "notifies handlers"
+
+' Command Repositories → Event Publishing
+PersonRepository ..> EventPublisher : "publishes on save"
+ActivityRepository ..> EventPublisher : "publishes on save"
+ActionRepository ..> EventPublisher : "publishes on save"
+
+' =======================
+' DEVELOPER NOTES
+' =======================
+note top of PersonApplicationService : "**Handles:**\n• User registration\n• Profile queries\n• Leaderboard generation"
+
+note top of ActivityApplicationService : "**Handles:**\n• Activity creation (Lead only)\n• Activity queries\n• Activity management"
+
+note top of ActionApplicationService : "**Handles:**\n• Action submission\n• Proof validation\n• Event publishing"
+
+note bottom of ReputationEventHandler : "**Domain Logic:**\nUpdates Person.reputationScore\nbased on action events"
+
+note bottom of LeaderboardProjectionHandler : "**Read Optimization:**\nMaintains leaderboard views\nfor fast query performance"
+
+note bottom of ActivityProjectionHandler : "**Read Optimization:**\nMaintains activity statistics\nfor dashboard displays"
+
+note as CQRSFlow
+**CQRS Flow Example:**
+
+1. **Command:** SubmitActionCommand → ActionApplicationService
+2. **Domain:** Creates Action aggregate → ActionSubmittedEvent  
+3. **Write:** Action saved to command store
+4. **Event:** ActionSubmittedEvent published
+5. **Handlers:** Update domain (Person) + projections (Leaderboard)
+6. **Query:** Fast reads from optimized projections
+
+This ensures **immediate consistency** for domain rules
+and **eventual consistency** for read optimizations.
+end note
+
+@enduml

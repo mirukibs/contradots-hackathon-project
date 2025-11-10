@@ -1,0 +1,188 @@
+@startuml CoreDomainModel
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+title Domain Layer - Core Business Logic (Hackathon MVP)
+
+' =======================
+' SHARED KERNEL (Minimal)
+' =======================
+package "Shared Kernel" <<Node>> {
+    class PersonId {
+        +value : UUID
+        +validate() : void
+    }
+    class ActivityId {
+        +value : UUID  
+        +validate() : void
+    }
+    class ActionId {
+        +value : UUID
+        +validate() : void
+    }
+    
+    ' Domain events that trigger real business actions
+    abstract class DomainEvent {
+        +eventId : UUID
+        +occurredAt : DateTime
+        +aggregateId : UUID
+        +aggregateType : string
+    }
+    
+    class ActionSubmittedEvent extends DomainEvent {
+        +actionId : ActionId
+        +personId : PersonId
+        +activityId : ActivityId
+        +description : string
+        +proofHash : string
+    }
+    
+    class ProofValidatedEvent extends DomainEvent {
+        +actionId : ActionId
+        +personId : PersonId
+        +activityId : ActivityId
+        +isValid : boolean
+    }
+}
+
+' =======================
+' PERSON AGGREGATE
+' =======================
+package "Person Aggregate" <<Database>> {
+    class Person <<AggregateRoot>> {
+        +personId : PersonId
+        +name : string
+        +email : string
+        +role : Role
+        +reputationScore : int
+        +register() : void
+        +updateReputation(points : int) : void
+        +canCreateActivities() : boolean
+        +getUncommittedEvents() : DomainEvent[]
+        +markEventsAsCommitted() : void
+    }
+
+    enum Role {
+        MEMBER
+        LEAD
+    }
+    
+    interface PersonRepository {
+        +findById(personId : PersonId) : Person
+        +save(person : Person) : void
+        +findAll() : Person[]
+    }
+}
+
+' =======================
+' ACTION AGGREGATE  
+' =======================
+package "Action Aggregate" <<Database>> {
+    class Action <<AggregateRoot>> {
+        +actionId : ActionId
+        +personId : PersonId
+        +activityId : ActivityId
+        +description : string
+        +proofHash : string
+        +status : ActionStatus
+        +submit() : ActionSubmittedEvent
+        +validateProof(isValid : boolean) : ProofValidatedEvent
+        +getUncommittedEvents() : DomainEvent[]
+        +markEventsAsCommitted() : void
+    }
+
+    enum ActionStatus {
+        SUBMITTED
+        VALIDATED
+        REJECTED
+    }
+    
+    interface ActionRepository {
+        +findById(actionId : ActionId) : Action
+        +save(action : Action) : void
+        +findPendingValidation() : Action[]
+        +findByPersonId(personId : PersonId) : Action[]
+        +findByActivityId(activityId : ActivityId) : Action[]
+    }
+}
+
+' =======================
+' ACTIVITY AGGREGATE
+' =======================
+package "Activity Aggregate" <<Database>> {
+    class Activity <<AggregateRoot>> {
+        +activityId : ActivityId
+        +name : string
+        +description : string
+        +leadId : PersonId
+        +points : int
+        +isActive : boolean
+        +create() : void
+        +deactivate() : void
+        +getUncommittedEvents() : DomainEvent[]
+        +markEventsAsCommitted() : void
+    }
+    
+    interface ActivityRepository {
+        +findById(activityId : ActivityId) : Activity
+        +save(activity : Activity) : void
+        +findActive() : Activity[]
+        +findByLeadId(leadId : PersonId) : Activity[]
+    }
+}
+
+' =======================
+' DOMAIN SERVICES
+' =======================
+package "Domain Services" <<Component>> {
+    class ReputationService {
+        +calculatePoints(activityId : ActivityId) : int
+        +updatePersonReputation(personId : PersonId, points : int) : void
+    }
+}
+
+' =======================
+' AGGREGATE RELATIONSHIPS
+' =======================
+Person *-- PersonId : "has identity"
+Person *-- Role : "has role"
+Action *-- ActionId : "has identity"
+Action *-- PersonId : "belongs to person"
+Action *-- ActivityId : "relates to activity"
+Action *-- ActionStatus : "has status"
+Activity *-- ActivityId : "has identity"
+Activity *-- PersonId : "managed by lead"
+
+' =======================
+' BUSINESS RULES & NOTES
+' =======================
+note top of Person : "**Business Rules:**\n• MEMBER can participate in activities\n• LEAD can create and manage activities\n• Reputation updated via events only"
+
+note top of Action : "**Business Rules:**\n• Must have blockchain proof hash\n• Status changes trigger domain events\n• Self-validating with external verification"
+
+note top of Activity : "**Business Rules:**\n• Only LEAD role can create\n• Points define reputation reward\n• Deactivation stops new participation"
+
+note bottom of ActionSubmittedEvent : "**Domain Event:**\nTriggers immediate reputation\ncalculation and reservation"
+
+note bottom of ProofValidatedEvent : "**Domain Event:**\nConfirms or reverts reputation\nbased on blockchain validation"
+
+note bottom of ReputationService : "**Core Business Logic:**\nCalculates points and manages\nreputation state changes"
+
+' =======================
+' EVENT-DRIVEN FLOW
+' =======================
+Action ..> ActionSubmittedEvent : "publishes when\naction submitted"
+Action ..> ProofValidatedEvent : "publishes when\nproof validated"
+
+note as FlowNote
+**Event-Driven Reputation Flow:**
+
+1. **Person submits Action** → ActionSubmittedEvent
+2. **Reputation reserved** (immediate feedback)
+3. **Blockchain validates proof** → ProofValidatedEvent  
+4. **Reputation confirmed or reverted** (integrity)
+
+This ensures users get instant feedback while
+maintaining system integrity through verification.
+end note
+
+@enduml
