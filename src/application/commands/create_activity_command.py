@@ -28,10 +28,10 @@ class CreateActivityCommand:
             ValueError: If any validation fails
         """
         if not self.name or not self.name.strip():
-            raise ValueError("Activity name is required and cannot be empty")
+            raise ValueError("Name is required and cannot be empty")
         
         if not self.description or not self.description.strip():
-            raise ValueError("Activity description is required and cannot be empty")
+            raise ValueError("Description is required and cannot be empty")
         
         if self.points <= 0:
             raise ValueError("Points must be positive")

@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contradots-hackathon-project"
+version = "0.1.0"
+description = "Social Scoring System with CQRS Architecture"
+requires-python = ">=3.8"
+
+[tool.pytest.ini_options]
+# Test discovery
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Test paths
+testpaths = ["tests"]
+
+# Add options for better output and unittest support
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings"
+]
+
+# Markers for test categorization
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests", 
+    "application: Application layer tests",
+    "rules: Business rules tests",
+    "domain: Domain layer tests",
+    "slow: Slow running tests"
+]
+
+# Minimum pytest version
+minversion = "6.0"
+
+# Filter warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+
+[tool.coverage.run]
+# Coverage configuration
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/venv/*", 
+    "*/.venv/*",
+    "*/migrations/*",
+    "*/settings/*",
+    "*/__pycache__/*",
+    "*/node_modules/*"
+]
+
+[tool.coverage.report]
+# Coverage reporting
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
+
+show_missing = true
+skip_covered = false
+precision = 2
+fail_under = 90
+
+[tool.coverage.html]
+directory = "htmlcov"

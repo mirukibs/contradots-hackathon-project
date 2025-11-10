@@ -2,6 +2,7 @@
 
 from typing import Dict, List
 from abc import ABC
+from uuid import uuid4
 
 from src.domain.shared.value_objects.person_id import PersonId
 from src.domain.shared.value_objects.activity_id import ActivityId
@@ -115,11 +116,12 @@ class TestActionQueryRepository:
         """Set up test fixtures"""
         self.repository = ConcreteActionQueryRepository()
         
-        # Test data - using string IDs for simplicity
-        self.person_id_1 = "person_1"
-        self.person_id_2 = "person_2"
-        self.activity_id_1 = "activity_1"
-        self.activity_id_2 = "activity_2"
+        # Test data - using proper UUID strings
+        from uuid import uuid4
+        self.person_id_1 = str(uuid4())
+        self.person_id_2 = str(uuid4())
+        self.activity_id_1 = str(uuid4())
+        self.activity_id_2 = str(uuid4())
         
         # Create test actions
         self.action_dto_1 = ActionDto(
@@ -223,12 +225,10 @@ class TestActionQueryRepository:
     def test_get_person_actions_with_no_actions_for_person(self):
         """Test get_person_actions returns empty list for person with no actions"""
         # Arrange
-        unknown_person_id = "unknown_person"
-        
+        unknown_person_id = str(uuid4())
+
         # Act
-        result = self.repository.get_person_actions(PersonId(unknown_person_id))
-        
-        # Assert
+        result = self.repository.get_person_actions(PersonId(unknown_person_id))        # Assert
         assert len(result) == 0
 
     def test_get_person_actions_handles_repository_error(self):
@@ -258,12 +258,10 @@ class TestActionQueryRepository:
     def test_get_activity_actions_empty_for_unknown_activity(self):
         """Test get_activity_actions returns empty list for unknown activity"""
         # Arrange
-        unknown_activity_id = "unknown_activity"
-        
+        unknown_activity_id = str(uuid4())
+
         # Act
-        result = self.repository.get_activity_actions(ActivityId(unknown_activity_id))
-        
-        # Assert
+        result = self.repository.get_activity_actions(ActivityId(unknown_activity_id))        # Assert
         assert len(result) == 0
 
     def test_get_activity_actions_handles_repository_error(self):
@@ -287,10 +285,11 @@ class TestActivityQueryRepository:
         """Set up test fixtures"""
         self.repository = ConcreteActivityQueryRepository()
         
-        # Test data - using string IDs for simplicity
-        self.activity_id_1 = "activity_1"
-        self.activity_id_2 = "activity_2"
-        self.creator_id = "creator_1"
+        # Test data - using proper UUID strings
+        from uuid import uuid4
+        self.activity_id_1 = str(uuid4())
+        self.activity_id_2 = str(uuid4())
+        self.creator_id = str(uuid4())
         
         # Create test activities
         self.activity_dto_1 = ActivityDto(
@@ -384,8 +383,8 @@ class TestActivityQueryRepository:
     def test_get_activity_details_raises_error_for_unknown_activity(self):
         """Test get_activity_details raises error for unknown activity"""
         # Arrange
-        unknown_activity_id = "unknown_activity"
-        
+        unknown_activity_id = str(uuid4())
+
         # Act & Assert
         try:
             self.repository.get_activity_details(ActivityId(unknown_activity_id))
@@ -415,9 +414,10 @@ class TestLeaderboardQueryRepository:
         self.repository = ConcreteLeaderboardQueryRepository()
         
         # Test data - using string IDs for simplicity
-        self.person_id_1 = "person_1"
-        self.person_id_2 = "person_2"
-        self.person_id_3 = "person_3"
+        from uuid import uuid4
+        self.person_id_1 = str(uuid4())
+        self.person_id_2 = str(uuid4())
+        self.person_id_3 = str(uuid4())
         
         # Create test leaderboard entries (sorted by rank)
         self.leaderboard_entry_1 = LeaderboardDto(
@@ -512,8 +512,8 @@ class TestLeaderboardQueryRepository:
     def test_get_person_rank_raises_error_for_unknown_person(self):
         """Test get_person_rank raises error for unknown person"""
         # Arrange
-        unknown_person_id = "unknown_person"
-        
+        unknown_person_id = str(uuid4())
+
         # Act & Assert
         try:
             self.repository.get_person_rank(PersonId(unknown_person_id))
@@ -544,15 +544,18 @@ class TestQueryRepositoriesIntegration:
         self.activity_repo = ConcreteActivityQueryRepository()
         self.leaderboard_repo = ConcreteLeaderboardQueryRepository()
         
-        # Common test data - using string IDs for simplicity
-        self.person_id = "test_person"
-        self.activity_id = "test_activity"
+        # Common test data - using proper UUIDs
+        self.person_id = str(uuid4())
+        self.activity_id = str(uuid4())
         
         # Set up related data across repositories
         self.setup_related_data()
 
     def setup_related_data(self):
         """Set up related data across all repositories"""
+        # Generate action ID
+        self.action_id = str(uuid4())
+        
         # Activity data
         activity_dto = ActivityDto(
             activityId=self.activity_id,
@@ -578,7 +581,7 @@ class TestQueryRepositoriesIntegration:
         
         # Action data
         action_dto = ActionDto(
-            actionId="test_action",
+            actionId=self.action_id,
             personName="John Doe",
             activityName="Beach Cleanup",
             description="Cleaned beach section A",
@@ -587,8 +590,8 @@ class TestQueryRepositoriesIntegration:
         )
         self.action_repo.actions = [action_dto]
         # Set up action mappings for filtering
-        self.action_repo.action_person_map = {"test_action": self.person_id}
-        self.action_repo.action_activity_map = {"test_action": self.activity_id}
+        self.action_repo.action_person_map = {self.action_id: self.person_id}
+        self.action_repo.action_activity_map = {self.action_id: self.activity_id}
         
         # Leaderboard data
         leaderboard_entry = LeaderboardDto(

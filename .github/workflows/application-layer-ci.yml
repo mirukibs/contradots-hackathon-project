@@ -75,9 +75,9 @@ jobs:
         fi
         
         # Verify Application Services exist
-        services=("PersonApplicationService" "ActivityApplicationService" "ActionApplicationService")
+        services=("person_application_service" "activity_application_service" "action_application_service")
         for service in "${services[@]}"; do
-          service_file="src/application/services/${service,,}.py"
+          service_file="src/application/services/${service}.py"
           if [ ! -f "$service_file" ]; then
             echo "❌ FAIL: Missing application service: $service"
             exit 1
@@ -86,9 +86,9 @@ jobs:
         done
         
         # Verify Query Repository Interfaces exist (from design model)
-        query_repos=("LeaderboardQueryRepository" "ActivityQueryRepository" "ActionQueryRepository")
+        query_repos=("leaderboard_query_repository" "activity_query_repository" "action_query_repository")
         for repo in "${query_repos[@]}"; do
-          repo_file="src/application/repositories/${repo,,}.py"
+          repo_file="src/application/repositories/${repo}.py"
           if [ ! -f "$repo_file" ]; then
             echo "⚠️  Query repository interface not found: $repo (recommended for CQRS)"
           else

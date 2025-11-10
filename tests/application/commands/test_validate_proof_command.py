@@ -335,3 +335,43 @@ class TestValidateProofCommand:
             isValid=False
         )
         assert command_false.isValid is False
+
+    def test_validate_action_id_none_type_error(self):
+        """Test validation with None actionId to trigger TypeError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid actionId first
+        command = ValidateProofCommand(
+            actionId=self.valid_action_id,
+            isValid=True
+        )
+        
+        # Mock uuid.UUID to raise TypeError on None input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = TypeError("int() argument must be a string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid actionId format"
+            except ValueError as e:
+                assert "Action ID must be a valid UUID" in str(e)
+
+    def test_validate_action_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid actionId first
+        command = ValidateProofCommand(
+            actionId=self.valid_action_id,
+            isValid=True
+        )
+        
+        # Mock uuid.UUID to raise ValueError on invalid input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = ValueError("badly formed hexadecimal UUID string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid actionId format"
+            except ValueError as e:
+                assert "Action ID must be a valid UUID" in str(e)

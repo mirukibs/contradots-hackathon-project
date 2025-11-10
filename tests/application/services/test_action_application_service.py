@@ -461,7 +461,7 @@ class TestActionApplicationService:
                 personId=PersonId.generate(),
                 activityId=self.valid_activity_id,
                 description="Action 2: Cleaned south section", 
-                proofHash="def456789abc123def456789abc12"
+                proofHash="def456789abc123def456789abc123de"
             ),
             SubmitActionCommand(
                 personId=PersonId.generate(),
@@ -545,14 +545,14 @@ class TestActionApplicationService:
         assert published_event.is_valid == True
 
     def test_hash_formats_in_proof_combination(self):
-        """Test different proof hash formats are properly combined"""
+        """Test different valid proof hash formats are properly combined"""
         # Arrange
         hash_formats = [
-            "abc123",
-            "ABC123DEF456",
-            "hash_with_underscores_123",
-            "hash-with-dashes-456",
-            "hash.with.dots.789"
+            "a1b2c3d4e5f67890a1b2c3d4e5f67890",  # 32 chars (MD5)
+            "A1B2C3D4E5F67890A1B2C3D4E5F67890DEF456AB",  # 40 chars (SHA-1)
+            "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890",  # 64 chars (SHA-256)
+            "A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890",  # 128 chars (SHA-512)
+            "fedcba9876543210fedcba9876543210"  # 32 chars (different pattern)
         ]
         
         self.mock_activity_repo.find_by_id.return_value = self.test_activity

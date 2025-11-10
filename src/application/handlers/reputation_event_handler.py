@@ -96,14 +96,14 @@ class ReputationEventHandler(EventHandler[DomainEvent]):
         
         # Since this is a proof validation event and it's valid,
         # we know an action was just verified, so we can add reputation points
-        current_reputation = person.reputation_score
         
         # Each verified action adds 10 points (as per domain service logic)
-        role_modifier = 1.2 if str(person.role) == "lead" else 1.0
+        from src.domain.person.role import Role
+        role_modifier = 1.2 if person.role == Role.LEAD else 1.0
         points_to_add = int(10 * role_modifier)
         
         # Update person reputation
-        person.update_reputation(current_reputation + points_to_add)
+        person.update_reputation(points_to_add)
         
         # Save the updated person
         self._person_repo.save(person)

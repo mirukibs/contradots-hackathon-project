@@ -40,6 +40,6 @@ class RegisterPersonCommand:
             raise ValueError("Role is required and cannot be empty")
         
         # Role validation - must be valid role
-        valid_roles = {'participant', 'lead'}
+        valid_roles = ['participant', 'lead']
         if self.role.lower() not in valid_roles:
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")

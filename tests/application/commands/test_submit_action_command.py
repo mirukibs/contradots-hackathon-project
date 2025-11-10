@@ -70,7 +70,7 @@ class TestSubmitActionCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Action description is required and cannot be empty" in str(e)
+            assert "Description is required and cannot be empty" in str(e)
 
     def test_validate_whitespace_only_description_raises_error(self):
         """Test validation fails with whitespace-only description"""
@@ -85,7 +85,7 @@ class TestSubmitActionCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Action description is required and cannot be empty" in str(e)
+            assert "Description is required and cannot be empty" in str(e)
 
     def test_validate_empty_proof_hash_raises_error(self):
         """Test validation fails with empty proof hash"""
@@ -145,9 +145,9 @@ class TestSubmitActionCommand:
         """Test validation passes with various valid proof hash formats"""
         valid_hashes = [
             "a1b2c3d4e5f67890abcdef1234567890",  # 32 chars (MD5 length)
-            "a1b2c3d4e5f67890abcdef1234567890abcdef12",  # 40 chars 
-            "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890ab",  # 64 chars (SHA256)
-            "A1B2C3D4E5F67890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890AB",  # 128 chars (uppercase)
+            "a1b2c3d4e5f67890abcdef1234567890abcdef12",  # 40 chars (SHA-1)
+            "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",  # 64 chars (SHA-256)
+            "A1B2C3D4E5F67890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890",  # 128 chars (SHA-512)
             "0123456789abcdef0123456789abcdef"  # All valid hex digits
         ]
         
@@ -262,7 +262,7 @@ class TestSubmitActionCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Action description is required and cannot be empty" in str(e)
+            assert "Description is required and cannot be empty" in str(e)
 
     def test_validate_long_description(self):
         """Test validation with very long description"""
@@ -305,3 +305,91 @@ class TestSubmitActionCommand:
         
         # Should not raise any exception
         command.validate()
+
+    def test_validate_activity_id_none_type_error(self):
+        """Test validation with None activityId to trigger TypeError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid data first
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Mock uuid.UUID to raise TypeError on first call (activityId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = TypeError("int() argument must be a string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid activityId format"
+            except ValueError as e:
+                assert "Activity ID must be a valid UUID" in str(e)
+
+    def test_validate_activity_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid data first
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Mock uuid.UUID to raise ValueError on first call (activityId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = ValueError("badly formed hexadecimal UUID string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid activityId format"
+            except ValueError as e:
+                assert "Activity ID must be a valid UUID" in str(e)
+
+    def test_validate_person_id_none_type_error(self):
+        """Test validation with None personId to trigger TypeError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid data first
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Mock uuid.UUID to raise TypeError on second call (personId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = [None, TypeError("int() argument must be a string")]
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid personId format"
+            except ValueError as e:
+                assert "Person ID must be a valid UUID" in str(e)
+
+    def test_validate_person_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
+        from unittest.mock import patch
+        
+        # Create command with valid data first
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Mock uuid.UUID to raise ValueError on second call (personId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = [None, ValueError("badly formed hexadecimal UUID string")]
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid personId format"
+            except ValueError as e:
+                assert "Person ID must be a valid UUID" in str(e)

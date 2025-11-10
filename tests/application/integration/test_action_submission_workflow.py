@@ -82,7 +82,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
     def test_complete_action_submission_workflow(self):
         """Test complete workflow: submit action → validate proof → update reputation"""
         # Arrange
-        proof_data = "a1b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234"  # Valid 64-char hex hash
+        proof_data = "a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012"  # Valid 64-char hex hash
         
         # Mock repository responses
         self.person_repo.find_by_id.return_value = self.person
@@ -184,7 +184,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
                 personId=self.person_id,
                 activityId=self.activity_id,
                 description=f"Action {i}",
-                proofHash=f"abcdef123456789{i:0>48}"  # Generate valid hex hashes
+                proofHash=f"abcdef12345678901{i:0>47}"  # Generate valid 64-char hex hashes
             ) for i in range(3)
         ]
         

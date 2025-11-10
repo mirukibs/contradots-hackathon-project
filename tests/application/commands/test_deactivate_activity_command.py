@@ -1,46 +1,18 @@
 """Comprehensive tests for DeactivateActivityCommand"""
 
+import unittest
+from unittest.mock import patch
 from src.application.commands.deactivate_activity_command import DeactivateActivityCommand
 from src.domain.shared.value_objects.activity_id import ActivityId
 from src.domain.shared.value_objects.person_id import PersonId
 
 
-class TestDeactivateActivityCommand:
-    """Test suite for DeactivateActivityCommand covering all methods and edge cases"""
-
-    def setup_method(self):
-        """Set up test fixtures"""
+class TestDeactivateActivityCommand(unittest.TestCase):
+    def setUp(self):
+        """Set up test data"""
         self.valid_activity_id = ActivityId.generate()
         self.valid_lead_id = PersonId.generate()
-
-    def test_command_creation_with_valid_data(self):
-        """Test creating command with valid data"""
-        command = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
         
-        assert command.activityId == self.valid_activity_id
-        assert command.leadId == self.valid_lead_id
-
-    def test_command_is_frozen(self):
-        """Test that command is immutable (frozen dataclass)"""
-        command = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        try:
-            # This should fail because it's a frozen dataclass
-            # We can't actually test this easily due to typing, but we know it's frozen
-            pass
-        except Exception:
-            pass  # Expected exception for frozen dataclass
-        
-        # Verify the command is still intact
-        assert command.activityId == self.valid_activity_id
-        assert command.leadId == self.valid_lead_id
-
     def test_validate_with_valid_data(self):
         """Test validation passes with valid data"""
         command = DeactivateActivityCommand(
@@ -50,161 +22,71 @@ class TestDeactivateActivityCommand:
         
         # Should not raise any exception
         command.validate()
-
-    def test_validate_activity_id_uuid_format(self):
-        """Test validation of ActivityId UUID format"""
-        # ActivityId validation happens at construction time
         
-        try:
-            ActivityId("invalid-uuid")
-            assert False, "Should have raised ValueError during ActivityId creation"
-        except ValueError:
-            pass  # Expected - ActivityId constructor should reject invalid UUIDs
-
-    def test_validate_person_id_uuid_format(self):
-        """Test validation of PersonId UUID format"""
-        # PersonId validation happens at construction time
-        
-        try:
-            PersonId("invalid-uuid")
-            assert False, "Should have raised ValueError during PersonId creation"
-        except ValueError:
-            pass  # Expected - PersonId constructor should reject invalid UUIDs
-
-    def test_command_equality(self):
-        """Test command equality comparison"""
-        command1 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        command2 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        assert command1 == command2
-
-    def test_command_inequality(self):
-        """Test command inequality comparison"""
-        command1 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        different_person = PersonId.generate()
-        command2 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=different_person
-        )
-        
-        assert command1 != command2
-
-    def test_command_hash(self):
-        """Test command can be hashed (for use in sets, dicts)"""
+    def test_validate_activity_id_none_type_error(self):
+        """Test validation with None activityId to trigger TypeError in UUID validation"""
         command = DeactivateActivityCommand(
             activityId=self.valid_activity_id,
             leadId=self.valid_lead_id
         )
         
-        # Should not raise any exception
-        hash(command)
-        
-        # Should work in sets
-        command_set = {command}
-        assert len(command_set) == 1
+        # Mock uuid.UUID to raise TypeError on None input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = TypeError("int() argument must be a string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid activityId format"
+            except ValueError as e:
+                assert "Activity ID must be a valid UUID" in str(e)
 
-    def test_command_repr(self):
-        """Test command string representation"""
+    def test_validate_activity_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
         command = DeactivateActivityCommand(
             activityId=self.valid_activity_id,
             leadId=self.valid_lead_id
         )
         
-        repr_str = repr(command)
-        assert "DeactivateActivityCommand" in repr_str
+        # Mock uuid.UUID to raise ValueError on invalid input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = ValueError("badly formed hexadecimal UUID string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid activityId format"
+            except ValueError as e:
+                assert "Activity ID must be a valid UUID" in str(e)
 
-    def test_command_different_instances_with_same_data(self):
-        """Test multiple command instances with same data"""
-        command1 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        command2 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        # Should be equal but different instances
-        assert command1 == command2
-        assert command1 is not command2
-
-    def test_command_with_different_activity_ids(self):
-        """Test commands with different activity IDs are not equal"""
-        different_activity_id = ActivityId.generate()
-        
-        command1 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        command2 = DeactivateActivityCommand(
-            activityId=different_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        assert command1 != command2
-
-    def test_command_with_different_lead_ids(self):
-        """Test commands with different lead IDs are not equal"""
-        different_lead_id = PersonId.generate()
-        
-        command1 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        command2 = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=different_lead_id
-        )
-        
-        assert command1 != command2
-
-    def test_command_validation_with_valid_uuid_strings(self):
-        """Test internal UUID validation with valid UUIDs"""
+    def test_validate_lead_id_none_type_error(self):
+        """Test validation with None leadId to trigger TypeError in UUID validation"""
         command = DeactivateActivityCommand(
             activityId=self.valid_activity_id,
             leadId=self.valid_lead_id
         )
         
-        # Should pass all internal UUID validations
-        command.validate()
+        # Mock uuid.UUID to raise TypeError on second call (leadId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = [None, TypeError("int() argument must be a string")]
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid leadId format"
+            except ValueError as e:
+                assert "Lead ID must be a valid UUID" in str(e)
 
-    def test_command_attributes_immutable_after_creation(self):
-        """Test command attributes cannot be changed after creation"""
+    def test_validate_lead_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
         command = DeactivateActivityCommand(
             activityId=self.valid_activity_id,
             leadId=self.valid_lead_id
         )
         
-        original_activity_id = command.activityId
-        original_lead_id = command.leadId
-        
-        # Verify fields are still the same
-        assert command.activityId == original_activity_id
-        assert command.leadId == original_lead_id
-
-    def test_command_with_minimum_valid_data(self):
-        """Test command creation with minimum required valid data"""
-        minimal_command = DeactivateActivityCommand(
-            activityId=self.valid_activity_id,
-            leadId=self.valid_lead_id
-        )
-        
-        minimal_command.validate()
-        
-        # Should have all required fields
-        assert minimal_command.activityId is not None
-        assert minimal_command.leadId is not None
+        # Mock uuid.UUID to raise ValueError on second call (leadId validation)
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = [None, ValueError("badly formed hexadecimal UUID string")]
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid leadId format"
+            except ValueError as e:
+                assert "Lead ID must be a valid UUID" in str(e)

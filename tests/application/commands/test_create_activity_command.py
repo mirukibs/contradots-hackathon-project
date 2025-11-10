@@ -69,7 +69,7 @@ class TestCreateActivityCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Activity name is required and cannot be empty" in str(e)
+            assert "Name is required and cannot be empty" in str(e)
 
     def test_validate_whitespace_only_name_raises_error(self):
         """Test validation fails with whitespace-only name"""
@@ -84,7 +84,7 @@ class TestCreateActivityCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Activity name is required and cannot be empty" in str(e)
+            assert "Name is required and cannot be empty" in str(e)
 
     def test_validate_empty_description_raises_error(self):
         """Test validation fails with empty description"""
@@ -99,7 +99,7 @@ class TestCreateActivityCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Activity description is required and cannot be empty" in str(e)
+            assert "Description is required and cannot be empty" in str(e)
 
     def test_validate_whitespace_only_description_raises_error(self):
         """Test validation fails with whitespace-only description"""
@@ -114,7 +114,7 @@ class TestCreateActivityCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Activity description is required and cannot be empty" in str(e)
+            assert "Description is required and cannot be empty" in str(e)
 
     def test_validate_zero_points_raises_error(self):
         """Test validation fails with zero points"""
@@ -279,7 +279,7 @@ class TestCreateActivityCommand:
             command.validate()
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Activity name is required and cannot be empty" in str(e)
+            assert "Name is required and cannot be empty" in str(e)
 
     def test_validate_long_name_and_description(self):
         """Test validation with very long name and description"""
@@ -298,8 +298,8 @@ class TestCreateActivityCommand:
 
     def test_validate_special_characters_in_text(self):
         """Test validation with special characters in name and description"""
-        special_name = "Clean-up & Restoration (Phase #1)"
-        special_description = "Activity with émojis 🌍, symbols @#$%, and unicode characters çñü"
+        special_name = "Activity with éñ特殊字符!"
+        special_description = "Description with émojis 🌍 and spécial chars @#$%"
         
         command = CreateActivityCommand(
             name=special_name,
@@ -310,3 +310,45 @@ class TestCreateActivityCommand:
         
         # Should not raise any exception
         command.validate()
+
+    def test_validate_lead_id_none_type_error(self):
+        """Test validation with None leadId to trigger TypeError in UUID validation"""
+        from unittest.mock import patch
+        
+        command = CreateActivityCommand(
+            name=self.valid_name,
+            description=self.valid_description,
+            points=self.valid_points,
+            leadId=self.valid_lead_id
+        )
+        
+        # Mock uuid.UUID to raise TypeError on None input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = TypeError("int() argument must be a string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid leadId format"
+            except ValueError as e:
+                assert "Lead ID must be a valid UUID" in str(e)
+
+    def test_validate_lead_id_invalid_uuid_format(self):
+        """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
+        from unittest.mock import patch
+        
+        command = CreateActivityCommand(
+            name=self.valid_name,
+            description=self.valid_description,
+            points=self.valid_points,
+            leadId=self.valid_lead_id
+        )
+        
+        # Mock uuid.UUID to raise ValueError on invalid input
+        with patch('uuid.UUID') as mock_uuid:
+            mock_uuid.side_effect = ValueError("badly formed hexadecimal UUID string")
+            
+            try:
+                command.validate()
+                assert False, "Should have raised ValueError for invalid leadId format"
+            except ValueError as e:
+                assert "Lead ID must be a valid UUID" in str(e)
