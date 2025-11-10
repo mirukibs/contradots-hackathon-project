@@ -9,7 +9,6 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  DJANGO_SETTINGS_MODULE: 'social_scoring_system.settings'
 
 jobs:
   # ============================================================
@@ -35,7 +34,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Validate Application Layer Structure
@@ -120,7 +119,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test PersonApplicationService Implementation
@@ -215,7 +214,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test RegisterPersonCommand
@@ -321,7 +320,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test PersonProfileDto
@@ -429,7 +428,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test Command Side Repositories
@@ -496,7 +495,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test EventStore Interface
@@ -600,7 +599,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test ReputationEventHandler
@@ -711,7 +710,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test Complete CQRS Flow Example
@@ -809,7 +808,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Test Application Layer Access Rules
@@ -908,7 +907,7 @@ jobs:
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge django pytest pytest-django coverage
+        conda install -c conda-forge pytest coverage
         conda list
     
     - name: Run Application Layer Coverage Analysis
