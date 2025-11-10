@@ -1,0 +1,1 @@
+# Action Aggregate for the Social Scoring System Domain

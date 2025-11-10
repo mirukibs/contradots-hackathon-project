@@ -1,0 +1,1 @@
+# Shared Kernel for the Social Scoring System Domain

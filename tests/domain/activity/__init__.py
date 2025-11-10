@@ -1,0 +1,1 @@
+# Activity aggregate tests package
