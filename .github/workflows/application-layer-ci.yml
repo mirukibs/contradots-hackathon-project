@@ -128,18 +128,7 @@ jobs:
         echo "=== TESTING PERSON APPLICATION SERVICE COMPLIANCE ==="
         
         if [ -f "tests/application/services/test_person_application_service.py" ]; then
-          python -m pytest tests/application/services/test_person_application_service.py -v \
-            --tb=short \
-            -k "test_register_person_command_processing \
-                or test_register_person_returns_person_id \
-                or test_get_person_profile_returns_dto \
-                or test_get_leaderboard_returns_dto_list \
-                or test_person_service_uses_person_repository \
-                or test_person_service_uses_leaderboard_query_repo \
-                or test_person_service_command_validation \
-                or test_person_service_dto_mapping \
-                or test_person_service_error_handling \
-                or test_person_service_dependency_injection"
+          python -m pytest tests/application/services/test_person_application_service.py -v --tb=short -p no:django
         else
           echo "⚠️  PersonApplicationService tests not yet implemented"
         fi
@@ -150,19 +139,7 @@ jobs:
         echo "=== TESTING ACTIVITY APPLICATION SERVICE COMPLIANCE ==="
         
         if [ -f "tests/application/services/test_activity_application_service.py" ]; then
-          python -m pytest tests/application/services/test_activity_application_service.py -v \
-            --tb=short \
-            -k "test_create_activity_command_processing \
-                or test_create_activity_returns_activity_id \
-                or test_create_activity_lead_only_access \
-                or test_get_active_activities_returns_dto_list \
-                or test_get_activity_details_returns_dto \
-                or test_deactivate_activity_command_processing \
-                or test_activity_service_uses_activity_repository \
-                or test_activity_service_uses_activity_query_repo \
-                or test_activity_service_uses_person_repository \
-                or test_activity_service_command_validation \
-                or test_activity_service_dto_mapping"
+          python -m pytest tests/application/services/test_activity_application_service.py -v --tb=short -p no:django
         else
           echo "⚠️  ActivityApplicationService tests not yet implemented"
         fi
@@ -173,19 +150,7 @@ jobs:
         echo "=== TESTING ACTION APPLICATION SERVICE COMPLIANCE ==="
         
         if [ -f "tests/application/services/test_action_application_service.py" ]; then
-          python -m pytest tests/application/services/test_action_application_service.py -v \
-            --tb=short \
-            -k "test_submit_action_command_processing \
-                or test_submit_action_returns_action_id \
-                or test_submit_action_publishes_event \
-                or test_get_pending_validations_returns_dto_list \
-                or test_get_person_actions_returns_dto_list \
-                or test_simulate_proof_validation_command_processing \
-                or test_action_service_uses_action_repository \
-                or test_action_service_uses_action_query_repo \
-                or test_action_service_uses_activity_repository \
-                or test_action_service_uses_event_publisher \
-                or test_action_service_command_validation"
+          python -m pytest tests/application/services/test_action_application_service.py -v --tb=short -p no:django
         else
           echo "⚠️  ActionApplicationService tests not yet implemented"
         fi
@@ -223,16 +188,7 @@ jobs:
         echo "=== TESTING REGISTER PERSON COMMAND COMPLIANCE ==="
         
         if [ -f "tests/application/commands/test_register_person_command.py" ]; then
-          python -m pytest tests/application/commands/test_register_person_command.py -v \
-            --tb=short \
-            -k "test_register_person_command_creation \
-                or test_register_person_command_validation \
-                or test_register_person_command_name_required \
-                or test_register_person_command_email_required \
-                or test_register_person_command_email_format \
-                or test_register_person_command_role_required \
-                or test_register_person_command_role_values \
-                or test_register_person_command_immutability"
+          python -m pytest tests/application/commands/test_register_person_command.py -v --tb=short -p no:django
         else
           echo "⚠️  RegisterPersonCommand tests not yet implemented"
         fi
@@ -243,16 +199,7 @@ jobs:
         echo "=== TESTING CREATE ACTIVITY COMMAND COMPLIANCE ==="
         
         if [ -f "tests/application/commands/test_create_activity_command.py" ]; then
-          python -m pytest tests/application/commands/test_create_activity_command.py -v \
-            --tb=short \
-            -k "test_create_activity_command_creation \
-                or test_create_activity_command_validation \
-                or test_create_activity_command_name_required \
-                or test_create_activity_command_description_required \
-                or test_create_activity_command_points_required \
-                or test_create_activity_command_points_positive \
-                or test_create_activity_command_lead_id_required \
-                or test_create_activity_command_immutability"
+          python -m pytest tests/application/commands/test_create_activity_command.py -v --tb=short -p no:django
         else
           echo "⚠️  CreateActivityCommand tests not yet implemented"
         fi
@@ -263,16 +210,7 @@ jobs:
         echo "=== TESTING SUBMIT ACTION COMMAND COMPLIANCE ==="
         
         if [ -f "tests/application/commands/test_submit_action_command.py" ]; then
-          python -m pytest tests/application/commands/test_submit_action_command.py -v \
-            --tb=short \
-            -k "test_submit_action_command_creation \
-                or test_submit_action_command_validation \
-                or test_submit_action_command_person_id_required \
-                or test_submit_action_command_activity_id_required \
-                or test_submit_action_command_description_required \
-                or test_submit_action_command_proof_hash_required \
-                or test_submit_action_command_proof_hash_format \
-                or test_submit_action_command_immutability"
+          python -m pytest tests/application/commands/test_submit_action_command.py -v --tb=short -p no:django
         else
           echo "⚠️  SubmitActionCommand tests not yet implemented"
         fi
@@ -284,14 +222,14 @@ jobs:
         
         # Test DeactivateActivityCommand
         if [ -f "tests/application/commands/test_deactivate_activity_command.py" ]; then
-          python -m pytest tests/application/commands/test_deactivate_activity_command.py -v --tb=short
+          python -m pytest tests/application/commands/test_deactivate_activity_command.py -v --tb=short -p no:django
         else
           echo "⚠️  DeactivateActivityCommand tests not yet implemented"
         fi
         
         # Test ValidateProofCommand
         if [ -f "tests/application/commands/test_validate_proof_command.py" ]; then
-          python -m pytest tests/application/commands/test_validate_proof_command.py -v --tb=short
+          python -m pytest tests/application/commands/test_validate_proof_command.py -v --tb=short -p no:django
         else
           echo "⚠️  ValidateProofCommand tests not yet implemented"
         fi
