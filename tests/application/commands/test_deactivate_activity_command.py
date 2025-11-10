@@ -90,3 +90,35 @@ class TestDeactivateActivityCommand(unittest.TestCase):
                 assert False, "Should have raised ValueError for invalid leadId format"
             except ValueError as e:
                 assert "Lead ID must be a valid UUID" in str(e)
+
+    def test_validate_none_lead_id_using_object_setattr(self):
+        """Test validation when leadId is None to cover line 31"""
+        command = DeactivateActivityCommand(
+            activityId=self.valid_activity_id,
+            leadId=self.valid_lead_id
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'leadId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None leadId"
+        except ValueError as e:
+            assert "Lead ID is required" in str(e)
+
+    def test_validate_none_activity_id_coverage(self):
+        """Test to ensure line 28 coverage - activity ID validation"""
+        command = DeactivateActivityCommand(
+            activityId=self.valid_activity_id,
+            leadId=self.valid_lead_id
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'activityId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None activityId"
+        except ValueError as e:
+            assert "Activity ID is required" in str(e)

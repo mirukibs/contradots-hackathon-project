@@ -352,3 +352,21 @@ class TestCreateActivityCommand:
                 assert False, "Should have raised ValueError for invalid leadId format"
             except ValueError as e:
                 assert "Lead ID must be a valid UUID" in str(e)
+
+    def test_validate_none_lead_id_using_object_setattr(self):
+        """Test validation when leadId is None to cover line 40"""
+        command = CreateActivityCommand(
+            name=self.valid_name,
+            description=self.valid_description,
+            points=self.valid_points,
+            leadId=self.valid_lead_id
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'leadId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None leadId"
+        except ValueError as e:
+            assert "Lead ID is required" in str(e)

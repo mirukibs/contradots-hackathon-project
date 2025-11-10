@@ -917,7 +917,7 @@ jobs:
         echo "=== GENERATING APPLICATION LAYER COVERAGE REPORT ==="
         
         if [ -d "src/application" ]; then
-          coverage run --source=src/application -m pytest tests/application/ || true
+          coverage run --source=src/application -m pytest tests/application/ -p no:django || true
           coverage report --show-missing
           coverage html --directory=htmlcov-application
           

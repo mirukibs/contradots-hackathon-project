@@ -318,15 +318,15 @@ class TestSubmitActionCommand:
             proofHash=self.valid_proof_hash
         )
         
-        # Mock uuid.UUID to raise TypeError on first call (activityId validation)
+        # Mock uuid.UUID to raise TypeError on first call (PersonId validation happens first)
         with patch('uuid.UUID') as mock_uuid:
             mock_uuid.side_effect = TypeError("int() argument must be a string")
             
             try:
                 command.validate()
-                assert False, "Should have raised ValueError for invalid activityId format"
+                assert False, "Should have raised ValueError for invalid PersonId format"
             except ValueError as e:
-                assert "Activity ID must be a valid UUID" in str(e)
+                assert "Person ID must be a valid UUID" in str(e)
 
     def test_validate_activity_id_invalid_uuid_format(self):
         """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
@@ -340,15 +340,15 @@ class TestSubmitActionCommand:
             proofHash=self.valid_proof_hash
         )
         
-        # Mock uuid.UUID to raise ValueError on first call (activityId validation)
+        # Mock uuid.UUID to raise ValueError on first call (PersonId validation happens first)
         with patch('uuid.UUID') as mock_uuid:
             mock_uuid.side_effect = ValueError("badly formed hexadecimal UUID string")
             
             try:
                 command.validate()
-                assert False, "Should have raised ValueError for invalid activityId format"
+                assert False, "Should have raised ValueError for invalid PersonId format"
             except ValueError as e:
-                assert "Activity ID must be a valid UUID" in str(e)
+                assert "Person ID must be a valid UUID" in str(e)
 
     def test_validate_person_id_none_type_error(self):
         """Test validation with None personId to trigger TypeError in UUID validation"""
@@ -362,15 +362,15 @@ class TestSubmitActionCommand:
             proofHash=self.valid_proof_hash
         )
         
-        # Mock uuid.UUID to raise TypeError on second call (personId validation)
+        # Mock uuid.UUID to succeed on first call (PersonId), then raise TypeError on second call (ActivityId)
         with patch('uuid.UUID') as mock_uuid:
             mock_uuid.side_effect = [None, TypeError("int() argument must be a string")]
             
             try:
                 command.validate()
-                assert False, "Should have raised ValueError for invalid personId format"
+                assert False, "Should have raised ValueError for invalid ActivityId format"
             except ValueError as e:
-                assert "Person ID must be a valid UUID" in str(e)
+                assert "Activity ID must be a valid UUID" in str(e)
 
     def test_validate_person_id_invalid_uuid_format(self):
         """Test validation with invalid UUID format to trigger ValueError in UUID validation"""
@@ -384,12 +384,48 @@ class TestSubmitActionCommand:
             proofHash=self.valid_proof_hash
         )
         
-        # Mock uuid.UUID to raise ValueError on second call (personId validation)
+        # Mock uuid.UUID to succeed on first call (PersonId), then raise ValueError on second call (ActivityId)
         with patch('uuid.UUID') as mock_uuid:
             mock_uuid.side_effect = [None, ValueError("badly formed hexadecimal UUID string")]
             
             try:
                 command.validate()
-                assert False, "Should have raised ValueError for invalid personId format"
+                assert False, "Should have raised ValueError for invalid ActivityId format"
             except ValueError as e:
-                assert "Person ID must be a valid UUID" in str(e)
+                assert "Activity ID must be a valid UUID" in str(e)
+    
+    def test_validate_none_person_id_using_object_setattr(self):
+        """Test validation when personId is None to cover line 33"""
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'personId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None personId"
+        except ValueError as e:
+            assert "Person ID is required" in str(e)
+
+    def test_validate_none_activity_id_using_object_setattr(self):
+        """Test validation when activityId is None to cover line 36"""
+        command = SubmitActionCommand(
+            activityId=self.valid_activity_id,
+            personId=self.valid_person_id,
+            description=self.valid_description,
+            proofHash=self.valid_proof_hash
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'activityId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None activityId"
+        except ValueError as e:
+            assert "Activity ID is required" in str(e)

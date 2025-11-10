@@ -41,7 +41,6 @@ class CreateActivityCommand:
         
         # Validate PersonId format (UUID)
         try:
-            # PersonId should be a valid UUID string
             import uuid
             uuid.UUID(str(self.leadId))
         except (ValueError, TypeError):

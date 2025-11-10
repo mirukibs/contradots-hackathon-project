@@ -375,3 +375,19 @@ class TestValidateProofCommand:
                 assert False, "Should have raised ValueError for invalid actionId format"
             except ValueError as e:
                 assert "Action ID must be a valid UUID" in str(e)
+
+    def test_validate_none_action_id_using_object_setattr(self):
+        """Test validation when actionId is None to cover missing line 27"""
+        command = ValidateProofCommand(
+            actionId=self.valid_action_id,
+            isValid=True
+        )
+        
+        # Use object.__setattr__ to bypass frozen dataclass restriction
+        object.__setattr__(command, 'actionId', None)
+        
+        try:
+            command.validate()
+            assert False, "Should have raised ValueError for None actionId"
+        except ValueError as e:
+            assert "Action ID is required" in str(e)
