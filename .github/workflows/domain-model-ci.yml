@@ -93,19 +93,9 @@ jobs:
         echo "=== TESTING VALUE OBJECTS COMPLIANCE ==="
         
         # Run specific tests for value objects
-        if [ -f "tests/domain/shared/value_objects/test_value_objects.py" ]; then
+        if [ -d "tests/domain/shared/value_objects" ] && [ "$(ls -A tests/domain/shared/value_objects/*.py 2>/dev/null)" ]; then
           python -m pytest tests/domain/shared/value_objects/ -v \
-            --tb=short -p no:django \
-            -k "test_person_id_creation_and_validation \
-                or test_person_id_uuid_format \
-                or test_person_id_immutability \
-                or test_activity_id_creation_and_validation \
-                or test_activity_id_uuid_format \
-                or test_activity_id_immutability \
-                or test_action_id_creation_and_validation \
-                or test_action_id_uuid_format \
-                or test_action_id_immutability \
-                or test_value_object_equality"
+            --tb=short -p no:django
         else
           echo "⚠️  Value object tests not yet implemented"
         fi
@@ -117,10 +107,7 @@ jobs:
         
         if [ -f "tests/domain/shared/events/test_domain_event.py" ]; then
           python -m pytest tests/domain/shared/events/test_domain_event.py -v \
-            --tb=short -p no:django \
-            -k "test_domain_event_base_properties \
-                or test_domain_event_immutability \
-                or test_domain_event_timestamp_generation"
+            --tb=short -p no:django
         else
           echo "⚠️  Domain event base class tests not yet implemented"
         fi
@@ -130,18 +117,10 @@ jobs:
       run: |
         echo "=== TESTING DOMAIN EVENTS COMPLIANCE ==="
         
-        # Run specific tests for domain events
-        if [ -f "tests/domain/shared/events/test_domain_events.py" ]; then
+        # Run all tests for domain events
+        if [ -d "tests/domain/shared/events" ] && [ "$(ls -A tests/domain/shared/events/*.py 2>/dev/null)" ]; then
           python -m pytest tests/domain/shared/events/ -v \
-            --tb=short -p no:django \
-            -k "test_action_submitted_event_creation \
-                or test_action_submitted_event_properties \
-                or test_action_submitted_event_immutability \
-                or test_proof_validated_event_creation \
-                or test_proof_validated_event_properties \
-                or test_proof_validated_event_immutability \
-                or test_event_inheritance_from_domain_event \
-                or test_event_aggregate_id_consistency"
+            --tb=short -p no:django
         else
           echo "⚠️  Domain event tests not yet implemented"
         fi
@@ -180,20 +159,7 @@ jobs:
         
         if [ -f "tests/domain/person/test_person.py" ]; then
           python -m pytest tests/domain/person/test_person.py -v \
-            --tb=short -p no:django \
-            -k "test_person_creation_with_valid_data \
-                or test_person_register_method \
-                or test_person_registration_generates_events \
-                or test_member_cannot_create_activities \
-                or test_lead_can_create_activities \
-                or test_can_create_activities_method \
-                or test_update_reputation_method \
-                or test_reputation_update_via_events_only \
-                or test_reputation_score_initialization \
-                or test_aggregate_root_event_management \
-                or test_person_identity_immutability \
-                or test_person_email_validation \
-                or test_person_name_validation"
+            --tb=short -p no:django
         else
           echo "⚠️  Person aggregate tests not yet implemented"
         fi
@@ -205,12 +171,7 @@ jobs:
         
         if [ -f "tests/domain/person/test_person_authentication.py" ]; then
           python -m pytest tests/domain/person/test_person_authentication.py -v \
-            --tb=short -p no:django \
-            -k "test_can_authenticate_with_email_method \
-                or test_has_permission_for_method \
-                or test_authentication_email_validation \
-                or test_permission_role_based_checks \
-                or test_permission_resource_ownership"
+            --tb=short -p no:django
         else
           echo "⚠️  Person authentication method tests not yet implemented"
         fi
@@ -228,12 +189,7 @@ jobs:
         
         if [ -f "tests/domain/person/test_person_repository.py" ]; then
           python -m pytest tests/domain/person/test_person_repository.py -v \
-            --tb=short -p no:django \
-            -k "test_find_by_id_contract \
-                or test_save_contract \
-                or test_find_all_contract \
-                or test_find_by_email_contract \
-                or test_repository_interface_compliance"
+            --tb=short -p no:django
         else
           echo "⚠️  Person repository contract tests not yet implemented"
         fi
@@ -245,12 +201,7 @@ jobs:
         
         if [ -f "tests/domain/person/test_role.py" ]; then
           python -m pytest tests/domain/person/test_role.py -v \
-            --tb=short -p no:django \
-            -k "test_role_member_value \
-                or test_role_lead_value \
-                or test_role_enum_values_complete \
-                or test_role_immutability \
-                or test_role_string_representation"
+            --tb=short -p no:django
         else
           echo "⚠️  Role enum tests not yet implemented"
         fi
@@ -289,19 +240,7 @@ jobs:
         
         if [ -f "tests/domain/action/test_action.py" ]; then
           python -m pytest tests/domain/action/test_action.py -v \
-            --tb=short -p no:django \
-            -k "test_action_creation_with_valid_data \
-                or test_action_requires_proof_hash \
-                or test_action_submit_method \
-                or test_action_submit_publishes_event \
-                or test_action_validate_proof_method \
-                or test_action_validate_proof_publishes_event \
-                or test_action_status_transitions \
-                or test_aggregate_root_event_management \
-                or test_action_identity_immutability \
-                or test_action_description_validation \
-                or test_action_proof_hash_validation \
-                or test_action_cross_aggregate_references"
+            --tb=short -p no:django
         else
           echo "⚠️  Action aggregate tests not yet implemented"
         fi
@@ -313,13 +252,7 @@ jobs:
         
         if [ -f "tests/domain/action/test_action_repository.py" ]; then
           python -m pytest tests/domain/action/test_action_repository.py -v \
-            --tb=short -p no:django \
-            -k "test_find_by_id_contract \
-                or test_save_contract \
-                or test_find_pending_validation_contract \
-                or test_find_by_person_id_contract \
-                or test_find_by_activity_id_contract \
-                or test_repository_interface_compliance"
+            --tb=short -p no:django
         else
           echo "⚠️  Action repository contract tests not yet implemented"
         fi
@@ -331,15 +264,7 @@ jobs:
         
         if [ -f "tests/domain/action/test_action_status.py" ]; then
           python -m pytest tests/domain/action/test_action_status.py -v \
-            --tb=short -p no:django \
-            -k "test_action_status_submitted_value \
-                or test_action_status_validated_value \
-                or test_action_status_rejected_value \
-                or test_action_status_enum_values_complete \
-                or test_submitted_to_validated_transition \
-                or test_submitted_to_rejected_transition \
-                or test_invalid_status_transitions \
-                or test_status_immutability"
+            --tb=short -p no:django
         else
           echo "⚠️  Action status tests not yet implemented"
         fi
@@ -376,21 +301,9 @@ jobs:
       run: |
         echo "=== TESTING ACTIVITY AGGREGATE COMPLIANCE ==="
         
-        if [ -f "src/domain/activity/test_activity_aggregate.py" ]; then
-          python -m pytest src/domain/activity/test_activity_aggregate.py -v \
-            --tb=short -p no:django \
-            -k "test_activity_creation_with_valid_data \
-                or test_only_lead_can_create_activity \
-                or test_activity_points_define_reward \
-                or test_activity_deactivation_stops_participation \
-                or test_activity_create_method \
-                or test_activity_deactivate_method \
-                or test_aggregate_root_event_management \
-                or test_activity_identity_immutability \
-                or test_activity_name_validation \
-                or test_activity_description_validation \
-                or test_activity_points_validation \
-                or test_activity_lead_id_validation"
+        if [ -f "tests/domain/activity/test_activity.py" ]; then
+          python -m pytest tests/domain/activity/test_activity.py -v \
+            --tb=short -p no:django
         else
           echo "⚠️  Activity aggregate tests not yet implemented"
         fi
@@ -400,14 +313,9 @@ jobs:
       run: |
         echo "=== TESTING ACTIVITY REPOSITORY CONTRACT ==="
         
-        if [ -f "src/domain/activity/test_activity_repository.py" ]; then
-          python -m pytest src/domain/activity/test_activity_repository.py -v \
-            --tb=short -p no:django \
-            -k "test_find_by_id_contract \
-                or test_save_contract \
-                or test_find_active_contract \
-                or test_find_by_lead_id_contract \
-                or test_repository_interface_compliance"
+        if [ -f "tests/domain/activity/test_activity_repository.py" ]; then
+          python -m pytest tests/domain/activity/test_activity_repository.py -v \
+            --tb=short -p no:django
         else
           echo "⚠️  Activity repository contract tests not yet implemented"
         fi
@@ -444,16 +352,9 @@ jobs:
       run: |
         echo "=== TESTING REPUTATION SERVICE COMPLIANCE ==="
         
-        if [ -f "src/domain/services/test_reputation_service.py" ]; then
-          python -m pytest src/domain/services/test_reputation_service.py -v \
-            --tb=short -p no:django \
-            -k "test_calculate_points_from_activity \
-                or test_update_person_reputation \
-                or test_reputation_calculation_business_rules \
-                or test_reputation_service_dependency_injection \
-                or test_reputation_points_validation \
-                or test_reputation_update_constraints \
-                or test_reputation_service_error_handling"
+        if [ -f "tests/domain/services/test_reputation_service.py" ]; then
+          python -m pytest tests/domain/services/test_reputation_service.py -v \
+            --tb=short -p no:django
         else
           echo "⚠️  Reputation service tests not yet implemented"
         fi
@@ -492,16 +393,7 @@ jobs:
         
         if [ -f "tests/domain/test_aggregate_root_pattern.py" ]; then
           python -m pytest tests/domain/test_aggregate_root_pattern.py -v \
-            --tb=short -p no:django \
-            -k "test_aggregate_root_identity_enforcement \
-                or test_aggregate_boundary_consistency \
-                or test_entity_modification_through_aggregate_only \
-                or test_uncommitted_events_tracking \
-                or test_event_marking_as_committed \
-                or test_get_uncommitted_events_method \
-                or test_mark_events_as_committed_method \
-                or test_aggregate_invariants_protection \
-                or test_aggregate_transaction_boundaries"
+            --tb=short -p no:django
         else
           echo "⚠️  Aggregate root pattern tests not yet implemented"
         fi
@@ -540,15 +432,7 @@ jobs:
         
         if [ -f "tests/domain/test_business_rules.py" ]; then
           python -m pytest tests/domain/test_business_rules.py -v \
-            --tb=short -p no:django \
-            -k "test_member_participation_rules \
-                or test_lead_creation_privileges \
-                or test_reputation_update_event_only \
-                or test_action_proof_hash_requirement \
-                or test_activity_points_reward_definition \
-                or test_activity_deactivation_participation_block \
-                or test_blockchain_proof_validation_requirement \
-                or test_cross_aggregate_consistency_rules"
+            --tb=short -p no:django
         else
           echo "⚠️  Business rule tests not yet implemented"
         fi
@@ -587,14 +471,7 @@ jobs:
         
         if [ -f "tests/integration/test_reputation_flow.py" ]; then
           python -m pytest tests/integration/test_reputation_flow.py -v \
-            --tb=short -p no:django \
-            -k "test_complete_reputation_flow_scenario \
-                or test_action_submission_to_reputation_update \
-                or test_proof_validation_to_reputation_confirmation \
-                or test_proof_validation_to_reputation_revert \
-                or test_reputation_reservation_mechanism \
-                or test_end_to_end_user_journey \
-                or test_blockchain_proof_integration"
+            --tb=short -p no:django
         else
           echo "⚠️  Integration tests not yet implemented"
         fi
@@ -606,12 +483,7 @@ jobs:
         
         if [ -f "tests/integration/test_event_infrastructure.py" ]; then
           python -m pytest tests/integration/test_event_infrastructure.py -v \
-            --tb=short -p no:django \
-            -k "test_event_publishing_mechanism \
-                or test_event_handler_registration \
-                or test_event_ordering_guarantees \
-                or test_event_persistence \
-                or test_event_replay_capabilities"
+            --tb=short -p no:django
         else
           echo "⚠️  Event infrastructure tests not yet implemented"
         fi
@@ -623,15 +495,7 @@ jobs:
         
         if [ -f "tests/integration/test_event_handling.py" ]; then
           python -m pytest tests/integration/test_event_handling.py -v \
-            --tb=short -p no:django \
-            -k "test_action_submitted_event_updates_person_reputation \
-                or test_proof_validated_event_confirms_or_reverts \
-                or test_event_consistency_across_aggregates \
-                or test_eventual_consistency_guarantees \
-                or test_aggregate_boundary_enforcement \
-                or test_event_causality_chains \
-                or test_compensating_actions \
-                or test_saga_pattern_implementation"
+            --tb=short -p no:django
         else
           echo "⚠️  Event handling tests not yet implemented"
         fi
@@ -670,15 +534,7 @@ jobs:
         
         if [ -f "tests/repositories/test_repository_contracts.py" ]; then
           python -m pytest tests/repositories/test_repository_contracts.py -v \
-            --tb=short -p no:django \
-            -k "test_person_repository_contract \
-                or test_action_repository_contract \
-                or test_activity_repository_contract \
-                or test_repository_interface_definitions \
-                or test_repository_method_signatures \
-                or test_repository_return_types \
-                or test_repository_exception_handling \
-                or test_repository_transaction_boundaries"
+            --tb=short -p no:django
         else
           echo "⚠️  Repository contract tests not yet implemented"
         fi
