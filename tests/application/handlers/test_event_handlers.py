@@ -18,7 +18,7 @@ from src.domain.person.role import Role
 from src.domain.activity.activity import Activity
 
 
-class TestDifferentEvent(DomainEvent):
+class MockDifferentEvent(DomainEvent):
     """Test event that handlers should not process"""
     
     def __init__(self):
@@ -119,7 +119,7 @@ class TestReputationEventHandler:
     def test_can_handle_unsupported_event(self):
         """Test handler cannot handle unsupported event types"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act
         result = self.handler.can_handle(unsupported_event)
@@ -217,7 +217,7 @@ class TestReputationEventHandler:
     def test_handle_unsupported_event_type(self):
         """Test handling unsupported event type raises error"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act & Assert
         try:
@@ -308,7 +308,7 @@ class TestActivityProjectionHandler:
     def test_can_handle_unsupported_event(self):
         """Test handler cannot handle unsupported event types"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act
         result = self.handler.can_handle(unsupported_event)
@@ -335,7 +335,7 @@ class TestActivityProjectionHandler:
     def test_handle_unsupported_event(self):
         """Test handling unsupported event type (should be ignored)"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act - should not raise any exceptions
         self.handler.handle(unsupported_event)
@@ -416,7 +416,7 @@ class TestLeaderboardProjectionHandler:
     def test_can_handle_unsupported_event(self):
         """Test handler cannot handle unsupported event types"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act
         result = self.handler.can_handle(unsupported_event)
@@ -443,7 +443,7 @@ class TestLeaderboardProjectionHandler:
     def test_handle_unsupported_event(self):
         """Test handling unsupported event type (should be ignored)"""
         # Arrange
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         
         # Act - should not raise any exceptions
         self.handler.handle(unsupported_event)
@@ -484,7 +484,7 @@ class TestLeaderboardProjectionHandler:
             assert self.handler.can_handle(event) == True
         
         # Test unsupported event type
-        unsupported_event = TestDifferentEvent()
+        unsupported_event = MockDifferentEvent()
         assert self.handler.can_handle(unsupported_event) == False
 
 
@@ -604,3 +604,289 @@ class TestEventHandlersIntegration:
                     assert handler.can_handle(event), f"{handler.__class__.__name__} should handle {event.__class__.__name__}"
                 else:
                     assert not handler.can_handle(event), f"{handler.__class__.__name__} should not handle {event.__class__.__name__}"
+
+
+# ============================================================
+# AUTHENTICATION COMMAND HANDLERS TESTS
+# ============================================================
+
+class TestLoginCommandHandler:
+    """Test cases for LoginCommandHandler."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        from src.application.handlers.authentication_command_handlers import LoginCommandHandler
+        
+        self.mock_auth_service = Mock()
+        self.handler = LoginCommandHandler(self.mock_auth_service)
+    
+    def test_login_command_handler_initialization(self):
+        """Test LoginCommandHandler initialization."""
+        from src.application.handlers.authentication_command_handlers import LoginCommandHandler
+        
+        mock_service = Mock()
+        handler = LoginCommandHandler(mock_service)
+        
+        # Test that handler was created successfully
+        assert handler is not None
+        assert hasattr(handler, 'handle')
+    
+    def test_handle_login_command_success(self):
+        """Test handling successful login command."""
+        from src.application.commands.authentication_commands import LoginCommand
+        from src.application.dtos.authentication_dtos import LoginResult
+        from src.domain.person.person import PersonId
+        
+        # Arrange
+        command = LoginCommand("test@example.com", "password123")
+        person_id = PersonId("123e4567-e89b-12d3-a456-426614174000")
+        expected_result = LoginResult.successful(person_id, "test@example.com")
+        
+        self.mock_auth_service.handle_login.return_value = expected_result
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result == expected_result
+        self.mock_auth_service.handle_login.assert_called_once_with(command)
+    
+    def test_handle_login_command_failure(self):
+        """Test handling failed login command."""
+        from src.application.commands.authentication_commands import LoginCommand
+        from src.application.dtos.authentication_dtos import LoginResult
+        
+        # Arrange
+        command = LoginCommand("invalid@example.com", "wrongpassword")
+        expected_result = LoginResult.failed("Invalid credentials")
+        
+        self.mock_auth_service.handle_login.return_value = expected_result
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result == expected_result
+        self.mock_auth_service.handle_login.assert_called_once_with(command)
+    
+    def test_handle_login_command_empty_credentials(self):
+        """Test handling login command with empty credentials."""
+        from src.application.commands.authentication_commands import LoginCommand
+        from src.application.dtos.authentication_dtos import LoginResult
+        
+        # Arrange - LoginCommand validates on creation, so we test the service behavior
+        # when it receives valid command with empty-like values that pass validation
+        command = LoginCommand("empty@example.com", "validpassword")
+        expected_result = LoginResult.failed("Email and password required")
+        
+        self.mock_auth_service.handle_login.return_value = expected_result
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result == expected_result
+        self.mock_auth_service.handle_login.assert_called_once_with(command)
+    
+    def test_handle_login_command_service_exception(self):
+        """Test handling login command when service raises exception."""
+        from src.application.commands.authentication_commands import LoginCommand
+        
+        # Arrange
+        command = LoginCommand("test@example.com", "password123")
+        self.mock_auth_service.handle_login.side_effect = Exception("Service error")
+        
+        # Act & Assert
+        try:
+            self.handler.handle(command)
+            assert False, "Expected exception to be raised"
+        except Exception as e:
+            assert "Service error" in str(e)
+        
+        self.mock_auth_service.handle_login.assert_called_once_with(command)
+    
+    def test_handle_login_command_multiple_calls(self):
+        """Test handling multiple login commands."""
+        from src.application.commands.authentication_commands import LoginCommand
+        from src.application.dtos.authentication_dtos import LoginResult
+        from src.domain.person.person import PersonId
+        
+        # Arrange
+        command1 = LoginCommand("user1@example.com", "password1")
+        command2 = LoginCommand("user2@example.com", "password2")
+        
+        person_id1 = PersonId("123e4567-e89b-12d3-a456-426614174001")
+        person_id2 = PersonId("123e4567-e89b-12d3-a456-426614174002")
+        
+        result1 = LoginResult.successful(person_id1, "user1@example.com")
+        result2 = LoginResult.successful(person_id2, "user2@example.com")
+        
+        self.mock_auth_service.handle_login.side_effect = [result1, result2]
+        
+        # Act
+        actual_result1 = self.handler.handle(command1)
+        actual_result2 = self.handler.handle(command2)
+        
+        # Assert
+        assert actual_result1 == result1
+        assert actual_result2 == result2
+        assert self.mock_auth_service.handle_login.call_count == 2
+
+
+class TestLogoutCommandHandler:
+    """Test cases for LogoutCommandHandler."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        from src.application.handlers.authentication_command_handlers import LogoutCommandHandler
+        
+        self.mock_auth_service = Mock()
+        self.handler = LogoutCommandHandler(self.mock_auth_service)
+    
+    def test_logout_command_handler_initialization(self):
+        """Test LogoutCommandHandler initialization."""
+        from src.application.handlers.authentication_command_handlers import LogoutCommandHandler
+        
+        mock_service = Mock()
+        handler = LogoutCommandHandler(mock_service)
+        
+        # Test that handler was created successfully
+        assert handler is not None
+        assert hasattr(handler, 'handle')
+    
+    def test_handle_logout_command_success(self):
+        """Test handling successful logout command."""
+        from src.application.commands.authentication_commands import LogoutCommand
+        from src.application.security.authentication_context import AuthenticationContext
+        from src.domain.person.person import PersonId
+        from src.domain.person.role import Role
+        
+        # Arrange
+        person_id = PersonId("123e4567-e89b-12d3-a456-426614174000")
+        auth_context = AuthenticationContext(
+            is_authenticated=True,
+            current_user_id=person_id,
+            email="test@example.com",
+            roles=[Role.MEMBER]
+        )
+        command = LogoutCommand(auth_context)
+        
+        self.mock_auth_service.handle_logout.return_value = True
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result is True
+        self.mock_auth_service.handle_logout.assert_called_once_with(command)
+    
+    def test_handle_logout_command_failure(self):
+        """Test handling failed logout command."""
+        from src.application.commands.authentication_commands import LogoutCommand
+        from src.application.security.authentication_context import AuthenticationContext
+        from src.domain.person.person import PersonId
+        from src.domain.person.role import Role
+        
+        # Arrange
+        person_id = PersonId("123e4567-e89b-12d3-a456-426614174000")
+        auth_context = AuthenticationContext(
+            is_authenticated=True,
+            current_user_id=person_id,
+            email="test@example.com",
+            roles=[Role.MEMBER]
+        )
+        command = LogoutCommand(auth_context)
+        
+        self.mock_auth_service.handle_logout.return_value = False
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result is False
+        self.mock_auth_service.handle_logout.assert_called_once_with(command)
+    
+    def test_handle_logout_command_unauthenticated_context(self):
+        """Test handling logout command with unauthenticated context."""
+        from src.application.commands.authentication_commands import LogoutCommand
+        from src.application.security.authentication_context import create_anonymous_context
+        
+        # Arrange
+        auth_context = create_anonymous_context()
+        command = LogoutCommand(auth_context)
+        
+        self.mock_auth_service.handle_logout.return_value = False
+        
+        # Act
+        result = self.handler.handle(command)
+        
+        # Assert
+        assert result is False
+        self.mock_auth_service.handle_logout.assert_called_once_with(command)
+    
+    def test_handle_logout_command_service_exception(self):
+        """Test handling logout command when service raises exception."""
+        from src.application.commands.authentication_commands import LogoutCommand
+        from src.application.security.authentication_context import AuthenticationContext
+        from src.domain.person.person import PersonId
+        from src.domain.person.role import Role
+        
+        # Arrange
+        person_id = PersonId("123e4567-e89b-12d3-a456-426614174000")
+        auth_context = AuthenticationContext(
+            is_authenticated=True,
+            current_user_id=person_id,
+            email="test@example.com",
+            roles=[Role.MEMBER]
+        )
+        command = LogoutCommand(auth_context)
+        
+        self.mock_auth_service.handle_logout.side_effect = Exception("Service error")
+        
+        # Act & Assert
+        try:
+            self.handler.handle(command)
+            assert False, "Expected exception to be raised"
+        except Exception as e:
+            assert "Service error" in str(e)
+        
+        self.mock_auth_service.handle_logout.assert_called_once_with(command)
+    
+    def test_handle_logout_command_multiple_calls(self):
+        """Test handling multiple logout commands."""
+        from src.application.commands.authentication_commands import LogoutCommand
+        from src.application.security.authentication_context import AuthenticationContext
+        from src.domain.person.person import PersonId
+        from src.domain.person.role import Role
+        
+        # Arrange
+        person_id1 = PersonId("123e4567-e89b-12d3-a456-426614174001")
+        person_id2 = PersonId("123e4567-e89b-12d3-a456-426614174002")
+        
+        auth_context1 = AuthenticationContext(
+            is_authenticated=True,
+            current_user_id=person_id1,
+            email="user1@example.com",
+            roles=[Role.MEMBER]
+        )
+        
+        auth_context2 = AuthenticationContext(
+            is_authenticated=True,
+            current_user_id=person_id2,
+            email="user2@example.com",
+            roles=[Role.LEAD]
+        )
+        
+        command1 = LogoutCommand(auth_context1)
+        command2 = LogoutCommand(auth_context2)
+        
+        self.mock_auth_service.handle_logout.side_effect = [True, True]
+        
+        # Act
+        result1 = self.handler.handle(command1)
+        result2 = self.handler.handle(command2)
+        
+        # Assert
+        assert result1 is True
+        assert result2 is True
+        assert self.mock_auth_service.handle_logout.call_count == 2

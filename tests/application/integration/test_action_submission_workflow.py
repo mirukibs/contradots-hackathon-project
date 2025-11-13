@@ -9,6 +9,7 @@ from src.application.commands.submit_action_command import SubmitActionCommand
 from src.application.handlers.reputation_event_handler import ReputationEventHandler
 from src.application.handlers.activity_projection_handler import ActivityProjectionHandler
 from src.application.handlers.leaderboard_projection_handler import LeaderboardProjectionHandler
+from src.application.security.authentication_context import AuthenticationContext
 from src.domain.action.action import Action
 from src.domain.person.person import Person
 from src.domain.activity.activity import Activity
@@ -32,6 +33,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         self.person_repo = Mock()
         self.leaderboard_query_repo = Mock()
         self.event_publisher = Mock()
+        self.authorization_service = Mock()
         
         # Create domain service
         self.reputation_service = ReputationService()
@@ -41,12 +43,14 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
             self.action_repo,
             self.action_query_repo,
             self.activity_repo,
-            self.event_publisher
+            self.event_publisher,
+            self.authorization_service
         )
         
         self.person_service = PersonApplicationService(
             self.person_repo,
-            self.leaderboard_query_repo
+            self.leaderboard_query_repo,
+            self.authorization_service
         )
         
         # Create event handlers
@@ -62,6 +66,12 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         self.person_id = PersonId.generate()
         self.activity_id = ActivityId.generate()
         self.action_id = ActionId.generate()
+        
+        # Create authentication context
+        self.auth_context = Mock(spec=AuthenticationContext)
+        self.auth_context.is_authenticated = True
+        self.auth_context.current_user_id = self.person_id
+        self.auth_context.email = "john@example.com"
         
         # Create test entities
         self.person = Person(
@@ -98,7 +108,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         )
         
         # Act 1: Submit action
-        returned_action_id = self.action_service.submit_action(submit_command)
+        returned_action_id = self.action_service.submit_action(submit_command, self.auth_context)
         
         # Assert 1: Action submission
         self.assertIsNotNone(returned_action_id)
@@ -169,7 +179,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         self.activity_repo.find_by_id.return_value = self.activity
         
         # Act: Submit action through service
-        action_id = self.action_service.submit_action(submit_command)
+        action_id = self.action_service.submit_action(submit_command, self.auth_context)
         
         # Assert: Data consistency is maintained
         self.assertIsNotNone(action_id)
@@ -194,7 +204,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         # Act: Submit multiple actions
         action_ids: list[str] = []
         for command in commands:
-            action_id = self.action_service.submit_action(command)
+            action_id = self.action_service.submit_action(command, self.auth_context)
             action_ids.append(str(action_id))  # Convert to string for consistent type
         
         # Assert: All actions were processed
@@ -220,7 +230,7 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
         
         # Act & Assert: Exception should be raised, but system should remain consistent
         with self.assertRaises(RuntimeError):
-            self.action_service.submit_action(submit_command)
+            self.action_service.submit_action(submit_command, self.auth_context)
         
         # Verify no events were published due to error
         self.event_publisher.publish.assert_not_called()

@@ -9,6 +9,7 @@ from src.application.commands.register_person_command import RegisterPersonComma
 from src.application.commands.create_activity_command import CreateActivityCommand
 from src.application.handlers.leaderboard_projection_handler import LeaderboardProjectionHandler
 from src.application.handlers.activity_projection_handler import ActivityProjectionHandler
+from src.application.security.authentication_context import AuthenticationContext
 from src.domain.person.person import Person
 from src.domain.activity.activity import Activity
 from src.domain.shared.value_objects.person_id import PersonId
@@ -26,18 +27,27 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         self.leaderboard_query_repo = Mock()
         self.activity_repo = Mock()
         self.activity_query_repo = Mock()
+        self.authorization_service = Mock()
         
         # Create services
         self.person_service = PersonApplicationService(
             self.person_repo,
-            self.leaderboard_query_repo
+            self.leaderboard_query_repo,
+            self.authorization_service
         )
         
         self.activity_service = ActivityApplicationService(
             self.activity_repo,
             self.activity_query_repo,
-            self.person_repo
+            self.person_repo,
+            self.authorization_service
         )
+        
+        # Create authentication context
+        self.auth_context = Mock(spec=AuthenticationContext)
+        self.auth_context.is_authenticated = True
+        self.auth_context.current_user_id = PersonId.generate()
+        self.auth_context.email = "test@example.com"
         
         # Create handlers
         self.leaderboard_handler = LeaderboardProjectionHandler(self.leaderboard_query_repo)
@@ -58,6 +68,9 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         
         # Act 1: Register user
         person_id = self.person_service.register_person(register_command)
+        
+        # Update auth context to use the registered person's ID
+        self.auth_context.current_user_id = person_id
         
         # Assert 1: User registration
         self.assertIsNotNone(person_id)
@@ -89,7 +102,7 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         self.activity_repo.save = Mock()
         
         # Act 2: Create activity
-        activity_id = self.activity_service.create_activity(create_activity_command)
+        activity_id = self.activity_service.create_activity(create_activity_command, self.auth_context)
         
         # Assert 2: Activity creation
         self.assertIsNotNone(activity_id)
@@ -137,7 +150,7 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         
         # Act 2 & Assert 2: Activity creation should fail
         with self.assertRaises(ValueError):
-            self.activity_service.create_activity(create_activity_command)
+            self.activity_service.create_activity(create_activity_command, self.auth_context)
         
     def test_duplicate_email_registration_prevention(self):
         """Test that duplicate email registrations are prevented"""
@@ -195,15 +208,23 @@ class TestActivityManagementWorkflow(unittest.TestCase):
         self.activity_repo = Mock()
         self.activity_query_repo = Mock()
         self.person_repo = Mock()
+        self.authorization_service = Mock()
         
         self.activity_service = ActivityApplicationService(
             self.activity_repo,
             self.activity_query_repo,
-            self.person_repo
+            self.person_repo,
+            self.authorization_service
         )
         
         # Test data
         self.lead_id = PersonId.generate()
+        
+        # Create authentication context
+        self.auth_context = Mock(spec=AuthenticationContext)
+        self.auth_context.is_authenticated = True
+        self.auth_context.current_user_id = self.lead_id
+        self.auth_context.email = "test@example.com"
         self.activity_id = ActivityId.generate()
         
         self.lead_person = Person(
@@ -227,7 +248,7 @@ class TestActivityManagementWorkflow(unittest.TestCase):
         self.activity_repo.save = Mock()
         
         # Act: Create activity
-        activity_id = self.activity_service.create_activity(create_command)
+        activity_id = self.activity_service.create_activity(create_command, self.auth_context)
         
         # Assert: Activity created
         self.assertIsNotNone(activity_id)
@@ -253,14 +274,18 @@ class TestActivityManagementWorkflow(unittest.TestCase):
         self.activity_repo.save = Mock()
         
         # Act: Create activity
-        activity_id = self.activity_service.create_activity(create_command)
+        activity_id = self.activity_service.create_activity(create_command, self.auth_context)
         
         # Assert: Activity was created successfully
         self.assertIsNotNone(activity_id)
         self.activity_repo.save.assert_called_once()
         
-        # Verify the person was checked for authorization
-        self.person_repo.find_by_id.assert_called_with(self.lead_id)
+        # Verify the created activity has correct attributes
+        saved_activity = self.activity_repo.save.call_args[0][0]
+        self.assertIsInstance(saved_activity, Activity)
+        self.assertEqual(saved_activity.title, "Test Activity")
+        self.assertEqual(saved_activity.description, "Test authorization")
+        self.assertEqual(saved_activity.creator_id, self.lead_id)
 
     def test_activity_business_rules_validation(self):
         """Test that business rules are enforced during activity creation"""
@@ -284,7 +309,7 @@ class TestActivityManagementWorkflow(unittest.TestCase):
         
         # Act & Assert: Should raise authorization error
         with self.assertRaises(ValueError):
-            self.activity_service.create_activity(create_command)
+            self.activity_service.create_activity(create_command, self.auth_context)
         
         # Verify no save was attempted
         self.activity_repo.save.assert_not_called()
@@ -303,13 +328,16 @@ class TestActivityManagementWorkflow(unittest.TestCase):
         self.activity_repo.save = Mock()
         
         # Act: Create activity
-        activity_id = self.activity_service.create_activity(create_command)
+        activity_id = self.activity_service.create_activity(create_command, self.auth_context)
         
         # Assert: Cross-aggregate consistency maintained
         self.assertIsNotNone(activity_id)
         
-        # Verify person was looked up before activity creation
-        self.person_repo.find_by_id.assert_called_with(self.lead_id)
+        # Verify activity was saved correctly
+        self.activity_repo.save.assert_called_once()
+        saved_activity = self.activity_repo.save.call_args[0][0]
+        self.assertIsInstance(saved_activity, Activity)
+        self.assertEqual(saved_activity.creator_id, self.lead_id)
         
         # Verify activity was saved with correct creator reference
         saved_activity = self.activity_repo.save.call_args[0][0]
