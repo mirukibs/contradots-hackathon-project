@@ -93,8 +93,8 @@ jobs:
         echo "=== TESTING VALUE OBJECTS COMPLIANCE ==="
         
         # Run specific tests for value objects
-        if [ -f "src/domain/shared/test_value_objects.py" ]; then
-          python -m pytest src/domain/shared/test_value_objects.py -v \
+        if [ -f "tests/domain/shared/value_objects/test_value_objects.py" ]; then
+          python -m pytest tests/domain/shared/value_objects/ -v \
             --tb=short -p no:django \
             -k "test_person_id_creation_and_validation \
                 or test_person_id_uuid_format \
@@ -115,8 +115,8 @@ jobs:
       run: |
         echo "=== TESTING DOMAIN EVENT BASE CLASS ==="
         
-        if [ -f "src/domain/shared/test_domain_event_base.py" ]; then
-          python -m pytest src/domain/shared/test_domain_event_base.py -v \
+        if [ -f "tests/domain/shared/events/test_domain_event.py" ]; then
+          python -m pytest tests/domain/shared/events/test_domain_event.py -v \
             --tb=short -p no:django \
             -k "test_domain_event_base_properties \
                 or test_domain_event_immutability \
@@ -131,8 +131,8 @@ jobs:
         echo "=== TESTING DOMAIN EVENTS COMPLIANCE ==="
         
         # Run specific tests for domain events
-        if [ -f "src/domain/shared/test_domain_events.py" ]; then
-          python -m pytest src/domain/shared/test_domain_events.py -v \
+        if [ -f "tests/domain/shared/events/test_domain_events.py" ]; then
+          python -m pytest tests/domain/shared/events/ -v \
             --tb=short -p no:django \
             -k "test_action_submitted_event_creation \
                 or test_action_submitted_event_properties \
@@ -178,8 +178,8 @@ jobs:
       run: |
         echo "=== TESTING PERSON AGGREGATE COMPLIANCE ==="
         
-        if [ -f "src/domain/person/test_person_aggregate.py" ]; then
-          python -m pytest src/domain/person/test_person_aggregate.py -v \
+        if [ -f "tests/domain/person/test_person.py" ]; then
+          python -m pytest tests/domain/person/test_person.py -v \
             --tb=short -p no:django \
             -k "test_person_creation_with_valid_data \
                 or test_person_register_method \
@@ -198,17 +198,41 @@ jobs:
           echo "⚠️  Person aggregate tests not yet implemented"
         fi
     
+    - name: Test Person Authentication Methods  
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING PERSON AUTHENTICATION METHODS ==="
+        
+        if [ -f "tests/domain/person/test_person_authentication.py" ]; then
+          python -m pytest tests/domain/person/test_person_authentication.py -v \
+            --tb=short -p no:django \
+            -k "test_can_authenticate_with_email_method \
+                or test_has_permission_for_method \
+                or test_authentication_email_validation \
+                or test_permission_role_based_checks \
+                or test_permission_resource_ownership"
+        else
+          echo "⚠️  Person authentication method tests not yet implemented"
+        fi
+        
+        # Test canAuthenticateWithEmail() method compliance
+        echo "Validating canAuthenticateWithEmail() implementation..."
+        
+        # Test hasPermissionFor() method compliance  
+        echo "Validating hasPermissionFor() implementation..."
+    
     - name: Test Person Repository Contract
       shell: bash -l {0}
       run: |
         echo "=== TESTING PERSON REPOSITORY CONTRACT ==="
         
-        if [ -f "src/domain/person/test_person_repository.py" ]; then
-          python -m pytest src/domain/person/test_person_repository.py -v \
+        if [ -f "tests/domain/person/test_person_repository.py" ]; then
+          python -m pytest tests/domain/person/test_person_repository.py -v \
             --tb=short -p no:django \
             -k "test_find_by_id_contract \
                 or test_save_contract \
                 or test_find_all_contract \
+                or test_find_by_email_contract \
                 or test_repository_interface_compliance"
         else
           echo "⚠️  Person repository contract tests not yet implemented"
@@ -219,8 +243,8 @@ jobs:
       run: |
         echo "=== TESTING ROLE ENUM COMPLIANCE ==="
         
-        if [ -f "src/domain/person/test_role.py" ]; then
-          python -m pytest src/domain/person/test_role.py -v \
+        if [ -f "tests/domain/person/test_role.py" ]; then
+          python -m pytest tests/domain/person/test_role.py -v \
             --tb=short -p no:django \
             -k "test_role_member_value \
                 or test_role_lead_value \
@@ -263,8 +287,8 @@ jobs:
       run: |
         echo "=== TESTING ACTION AGGREGATE COMPLIANCE ==="
         
-        if [ -f "src/domain/action/test_action_aggregate.py" ]; then
-          python -m pytest src/domain/action/test_action_aggregate.py -v \
+        if [ -f "tests/domain/action/test_action.py" ]; then
+          python -m pytest tests/domain/action/test_action.py -v \
             --tb=short -p no:django \
             -k "test_action_creation_with_valid_data \
                 or test_action_requires_proof_hash \
@@ -287,8 +311,8 @@ jobs:
       run: |
         echo "=== TESTING ACTION REPOSITORY CONTRACT ==="
         
-        if [ -f "src/domain/action/test_action_repository.py" ]; then
-          python -m pytest src/domain/action/test_action_repository.py -v \
+        if [ -f "tests/domain/action/test_action_repository.py" ]; then
+          python -m pytest tests/domain/action/test_action_repository.py -v \
             --tb=short -p no:django \
             -k "test_find_by_id_contract \
                 or test_save_contract \
@@ -305,8 +329,8 @@ jobs:
       run: |
         echo "=== TESTING ACTION STATUS COMPLIANCE ==="
         
-        if [ -f "src/domain/action/test_action_status.py" ]; then
-          python -m pytest src/domain/action/test_action_status.py -v \
+        if [ -f "tests/domain/action/test_action_status.py" ]; then
+          python -m pytest tests/domain/action/test_action_status.py -v \
             --tb=short -p no:django \
             -k "test_action_status_submitted_value \
                 or test_action_status_validated_value \

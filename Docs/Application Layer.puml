@@ -1,7 +1,46 @@
 @startuml ApplicationLayer
 skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
-title Application Layer - CQRS Architecture (Orchestrates Domain Logic)
+title Application Layer - CQRS Architecture with Authentication (Orchestrates Domain Logic)
+
+' =======================
+' AUTHENTICATION & AUTHORIZATION
+' =======================
+package "Authentication & Authorization" <<Security>> {
+    class AuthenticationContext {
+        +currentUserId : PersonId
+        +email : string
+        +roles : List<Role>
+        +isAuthenticated : boolean
+        +canActAs(personId : PersonId) : boolean
+        +hasRole(role : Role) : boolean
+        +canAccessResource(resourceId : string, operation : string) : boolean
+    }
+    
+    class AuthorizationService {
+        +validateUserCanActAs(auth : AuthContext, targetPersonId : PersonId) : void
+        +validateRolePermission(auth : AuthContext, operation : string) : void
+        +enforceResourceAccess(auth : AuthContext, resourceId : string) : void
+        +enforceActivityOwnership(auth : AuthContext, activityId : ActivityId) : void
+        -personRepo : PersonRepository
+    }
+    
+    class AuthenticationException {
+        +message : string
+        +email : string
+        +attemptedAt : DateTime
+        +AuthenticationException(message : string, email : string)
+    }
+    
+    class AuthorizationException {
+        +message : string
+        +userId : PersonId
+        +operation : string
+        +resourceId : string
+        +attemptedAt : DateTime
+        +AuthorizationException(message : string, userId : PersonId, operation : string)
+    }
+}
 
 ' =======================
 ' APPLICATION SERVICES
@@ -9,32 +48,38 @@ title Application Layer - CQRS Architecture (Orchestrates Domain Logic)
 package "Application Services" <<Cloud>> {
     
     class PersonApplicationService {
-        +registerPerson(command: RegisterPersonCommand) : PersonId
-        +getPersonProfile(personId: PersonId) : PersonProfileDto
-        +getLeaderboard() : LeaderboardDto[]
+        +registerPerson(command : RegisterPersonCommand) : PersonId
+        +authenticateUser(command : AuthenticateUserCommand) : AuthenticationResultDto
+        +getPersonProfile(personId : PersonId, auth : AuthContext) : PersonProfileDto
+        +getCurrentUserProfile(auth : AuthContext) : PersonProfileDto
+        +getLeaderboard(auth : AuthContext) : LeaderboardDto[]
         -personRepo : PersonRepository
         -leaderboardQueryRepo : LeaderboardQueryRepository
+        -authorizationService : AuthorizationService
     }
     
     class ActivityApplicationService {
-        +createActivity(command: CreateActivityCommand) : ActivityId
-        +getActiveActivities() : ActivityDto[]
-        +getActivityDetails(activityId: ActivityId) : ActivityDetailsDto
-        +deactivateActivity(command: DeactivateActivityCommand) : void
+        +createActivity(command : CreateActivityCommand, auth : AuthContext) : ActivityId
+        +getActiveActivities(auth : AuthContext) : ActivityDto[]
+        +getActivityDetails(activityId : ActivityId, auth : AuthContext) : ActivityDetailsDto
+        +deactivateActivity(command : DeactivateActivityCommand, auth : AuthContext) : void
         -activityRepo : ActivityRepository
         -activityQueryRepo : ActivityQueryRepository
         -personRepo : PersonRepository
+        -authorizationService : AuthorizationService
     }
     
     class ActionApplicationService {
-        +submitAction(command: SubmitActionCommand) : ActionId
-        +getPendingValidations() : ActionDto[]
-        +getPersonActions(personId: PersonId) : ActionDto[]
-        +simulateProofValidation(command: ValidateProofCommand) : void
+        +submitAction(command : SubmitActionCommand, auth : AuthContext) : ActionId
+        +getPendingValidations(auth : AuthContext) : ActionDto[]
+        +getPersonActions(personId : PersonId, auth : AuthContext) : ActionDto[]
+        +getMyActions(auth : AuthContext) : ActionDto[]
+        +simulateProofValidation(command : ValidateProofCommand, auth : AuthContext) : void
         -actionRepo : ActionRepository
         -actionQueryRepo : ActionQueryRepository
         -activityRepo : ActivityRepository
         -eventPublisher : EventPublisher
+        -authorizationService : AuthorizationService
     }
 }
 
@@ -49,12 +94,19 @@ package "Commands" <<Folder>> {
         +validate() : void
     }
     
+    class AuthenticateUserCommand {
+        +email : string
+        +password : string
+        +validate() : void
+    }
+    
     class CreateActivityCommand {
         +name : string
         +description : string
         +points : int
         +leadId : PersonId
         +validate() : void
+        +validateAuthorization(auth : AuthContext) : void
     }
     
     class SubmitActionCommand {
@@ -63,18 +115,21 @@ package "Commands" <<Folder>> {
         +description : string
         +proofHash : string
         +validate() : void
+        +validateAuthorization(auth : AuthContext) : void
     }
     
     class DeactivateActivityCommand {
         +activityId : ActivityId
         +leadId : PersonId
         +validate() : void
+        +validateAuthorization(auth : AuthContext) : void
     }
     
     class ValidateProofCommand {
         +actionId : ActionId
         +isValid : boolean
         +validate() : void
+        +validateAuthorization(auth : AuthContext) : void
     }
 }
 
@@ -88,6 +143,15 @@ package "DTOs" <<Folder>> {
         +email : string
         +role : string
         +reputationScore : int
+    }
+    
+    class AuthenticationResultDto {
+        +accessToken : string
+        +refreshToken : string
+        +personId : string
+        +email : string
+        +roles : List<string>
+        +expiresAt : DateTime
     }
     
     class LeaderboardDto {
@@ -133,6 +197,7 @@ package "DTOs" <<Folder>> {
 package "Command Side (Write)" <<Database>> {
     interface PersonRepository {
         +findById(personId : PersonId) : Person
+        +findByEmail(email : string) : Person
         +save(person : Person) : void
         +findAll() : Person[]
     }
@@ -255,6 +320,7 @@ package "Domain Services" <<Component>> {
     class ReputationService {
         +calculatePoints(activityId : ActivityId) : int
         +updatePersonReputation(personId : PersonId, points : int) : void
+        +calculatePersonReputation(person : Person, verifiedActions : List<Action>) : int
     }
 }
 
@@ -262,15 +328,33 @@ package "Domain Services" <<Component>> {
 ' APPLICATION SERVICE USAGE
 ' =======================
 
-' Commands → Application Services
+' Authentication Context Usage
+PersonApplicationService ..> AuthenticationContext : "requires for secure operations"
+ActivityApplicationService ..> AuthenticationContext : "requires for secure operations"
+ActionApplicationService ..> AuthenticationContext : "requires for secure operations"
+
+' Authorization Service Usage
+PersonApplicationService ..> AuthorizationService : "validates permissions"
+ActivityApplicationService ..> AuthorizationService : "validates permissions"
+ActionApplicationService ..> AuthorizationService : "validates permissions"
+
+' Commands → Application Services (with auth validation)
 PersonApplicationService ..> RegisterPersonCommand : "validates & processes"
+PersonApplicationService ..> AuthenticateUserCommand : "validates & processes"
 ActivityApplicationService ..> CreateActivityCommand : "validates & processes"  
 ActivityApplicationService ..> DeactivateActivityCommand : "validates & processes"
 ActionApplicationService ..> SubmitActionCommand : "validates & processes"
 ActionApplicationService ..> ValidateProofCommand : "validates & processes"
 
+' Command Authorization Validation
+CreateActivityCommand ..> AuthenticationContext : "validates authorization"
+SubmitActionCommand ..> AuthenticationContext : "validates authorization"
+DeactivateActivityCommand ..> AuthenticationContext : "validates authorization"
+ValidateProofCommand ..> AuthenticationContext : "validates authorization"
+
 ' Application Services → DTOs  
 PersonApplicationService ..> PersonProfileDto : "returns"
+PersonApplicationService ..> AuthenticationResultDto : "returns"
 PersonApplicationService ..> LeaderboardDto : "returns"
 ActivityApplicationService ..> ActivityDto : "returns"
 ActivityApplicationService ..> ActivityDetailsDto : "returns"
@@ -323,11 +407,15 @@ ActionRepository ..> EventPublisher : "publishes on save"
 ' =======================
 ' DEVELOPER NOTES
 ' =======================
-note top of PersonApplicationService : "**Handles:**\n• User registration\n• Profile queries\n• Leaderboard generation"
+note top of PersonApplicationService : "**Handles:**\n• User registration (public)\n• User authentication\n• Profile queries (auth required)\n• Leaderboard generation"
 
-note top of ActivityApplicationService : "**Handles:**\n• Activity creation (Lead only)\n• Activity queries\n• Activity management"
+note top of ActivityApplicationService : "**Handles:**\n• Activity creation (Lead only)\n• Activity queries (auth required)\n• Activity management (creator only)"
 
-note top of ActionApplicationService : "**Handles:**\n• Action submission\n• Proof validation\n• Event publishing"
+note top of ActionApplicationService : "**Handles:**\n• Action submission (auth required)\n• Proof validation (Lead only)\n• Event publishing"
+
+note top of AuthenticationContext : "**Security Context:**\n• Current user identity\n• Role-based permissions\n• Resource access validation"
+
+note top of AuthorizationService : "**Authorization Logic:**\n• User identity validation\n• Role permission checks\n• Resource ownership enforcement"
 
 note bottom of ReputationEventHandler : "**Domain Logic:**\nUpdates Person.reputationScore\nbased on action events"
 
@@ -336,17 +424,20 @@ note bottom of LeaderboardProjectionHandler : "**Read Optimization:**\nMaintains
 note bottom of ActivityProjectionHandler : "**Read Optimization:**\nMaintains activity statistics\nfor dashboard displays"
 
 note as CQRSFlow
-**CQRS Flow Example:**
+**Secure CQRS Flow Example:**
 
-1. **Command:** SubmitActionCommand → ActionApplicationService
-2. **Domain:** Creates Action aggregate → ActionSubmittedEvent  
-3. **Write:** Action saved to command store
-4. **Event:** ActionSubmittedEvent published
-5. **Handlers:** Update domain (Person) + projections (Leaderboard)
-6. **Query:** Fast reads from optimized projections
+1. **Authentication:** User login → AuthenticationContext created
+2. **Command:** SubmitActionCommand + AuthContext → ActionApplicationService
+3. **Authorization:** Command validates user can act as personId
+4. **Domain:** Creates Action aggregate → ActionSubmittedEvent  
+5. **Write:** Action saved to command store
+6. **Event:** ActionSubmittedEvent published
+7. **Handlers:** Update domain (Person) + projections (Leaderboard)
+8. **Query:** Fast reads from optimized projections (auth-filtered)
 
-This ensures **immediate consistency** for domain rules
-and **eventual consistency** for read optimizations.
+This ensures **authentication** at entry points,
+**authorization** for all operations, and
+**secure access** to all resources.
 end note
 
 @enduml

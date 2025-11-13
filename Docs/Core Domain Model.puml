@@ -57,6 +57,10 @@ package "Person Aggregate" <<Database>> {
         +register() : void
         +updateReputation(points : int) : void
         +canCreateActivities() : boolean
+        +canAuthenticateWithEmail(email : string) : boolean
+        +hasPermissionFor(operation : string) : boolean
+        +canManageActivity(activityId : ActivityId) : boolean
+        +canSubmitActionAs(personId : PersonId) : boolean
         +getUncommittedEvents() : DomainEvent[]
         +markEventsAsCommitted() : void
     }
@@ -68,6 +72,7 @@ package "Person Aggregate" <<Database>> {
     
     interface PersonRepository {
         +findById(personId : PersonId) : Person
+        +findByEmail(email : string) : Person
         +save(person : Person) : void
         +findAll() : Person[]
     }
@@ -137,6 +142,7 @@ package "Domain Services" <<Component>> {
     class ReputationService {
         +calculatePoints(activityId : ActivityId) : int
         +updatePersonReputation(personId : PersonId, points : int) : void
+        +calculatePersonReputation(person : Person, verifiedActions : List<Action>) : int
     }
 }
 
@@ -155,11 +161,11 @@ Activity *-- PersonId : "managed by lead"
 ' =======================
 ' BUSINESS RULES & NOTES
 ' =======================
-note top of Person : "**Business Rules:**\n• MEMBER can participate in activities\n• LEAD can create and manage activities\n• Reputation updated via events only"
+note top of Person : "**Business Rules:**\n• MEMBER can participate in activities\n• LEAD can create and manage activities\n• Reputation updated via events only\n• Authentication via email (domain validation)\n• Authorization via role-based permissions"
 
-note top of Action : "**Business Rules:**\n• Must have blockchain proof hash\n• Status changes trigger domain events\n• Self-validating with external verification"
+note top of Action : "**Business Rules:**\n• Must have blockchain proof hash\n• Status changes trigger domain events\n• Self-validating with external verification\n• Only owner can submit actions for themselves"
 
-note top of Activity : "**Business Rules:**\n• Only LEAD role can create\n• Points define reputation reward\n• Deactivation stops new participation"
+note top of Activity : "**Business Rules:**\n• Only LEAD role can create\n• Points define reputation reward\n• Deactivation stops new participation\n• Only creator can manage activity"
 
 note bottom of ActionSubmittedEvent : "**Domain Event:**\nTriggers immediate reputation\ncalculation and reservation"
 

@@ -96,12 +96,89 @@ jobs:
         done
 
   # ============================================================
+  # AUTHENTICATION & AUTHORIZATION TESTS
+  # ============================================================
+  authentication-authorization-tests:
+    name: "Authentication & Authorization - Security Context Validation"
+    runs-on: ubuntu-latest
+    needs: application-layer-validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: ${{ env.PYTHON_VERSION }}
+        activate-environment: social_scoring
+        environment-file: environment.yml
+        auto-activate-base: false
+    
+    - name: Install dependencies
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge pytest coverage
+        conda list
+    
+    - name: Test AuthenticationContext Implementation
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING AUTHENTICATION CONTEXT COMPLIANCE ==="
+        
+        if [ -f "tests/application/security/test_authentication_context.py" ]; then
+          python -m pytest tests/application/security/test_authentication_context.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthenticationContext tests not yet implemented"
+        fi
+    
+    - name: Test AuthorizationService Implementation
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING AUTHORIZATION SERVICE COMPLIANCE ==="
+        
+        if [ -f "tests/application/security/test_authorization_service.py" ]; then
+          python -m pytest tests/application/security/test_authorization_service.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthorizationService tests not yet implemented"
+        fi
+    
+    - name: Test Security Exception Handling
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING SECURITY EXCEPTION HANDLING ==="
+        
+        if [ -f "tests/application/exceptions/test_security_exceptions.py" ]; then
+          python -m pytest tests/application/exceptions/test_security_exceptions.py -v --tb=short -p no:django
+        else
+          echo "⚠️  Security exception tests not yet implemented"
+        fi
+    
+    - name: Test Security Exceptions
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING SECURITY EXCEPTIONS COMPLIANCE ==="
+        
+        if [ -f "tests/application/security/test_authentication_exception.py" ]; then
+          python -m pytest tests/application/security/test_authentication_exception.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthenticationException tests not yet implemented"
+        fi
+        
+        if [ -f "tests/application/security/test_authorization_exception.py" ]; then
+          python -m pytest tests/application/security/test_authorization_exception.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthorizationException tests not yet implemented"
+        fi
+
+  # ============================================================
   # APPLICATION SERVICES COMPLIANCE TESTS
   # ============================================================
   application-services-tests:
     name: "Application Services - CQRS Pattern Validation"
     runs-on: ubuntu-latest
-    needs: application-layer-validation
+    needs: authentication-authorization-tests
     
     steps:
     - name: Checkout code
@@ -193,6 +270,17 @@ jobs:
           echo "⚠️  RegisterPersonCommand tests not yet implemented"
         fi
     
+    - name: Test AuthenticateUserCommand
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING AUTHENTICATE USER COMMAND COMPLIANCE ==="
+        
+        if [ -f "tests/application/commands/test_authenticate_user_command.py" ]; then
+          python -m pytest tests/application/commands/test_authenticate_user_command.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthenticateUserCommand tests not yet implemented"
+        fi
+    
     - name: Test CreateActivityCommand
       shell: bash -l {0}
       run: |
@@ -270,6 +358,17 @@ jobs:
           python -m pytest tests/application/dtos/test_person_profile_dto.py -v --tb=short -p no:django
         else
           echo "⚠️  PersonProfileDto tests not yet implemented"
+        fi
+    
+    - name: Test AuthenticationResultDto
+      shell: bash -l {0}
+      run: |
+        echo "=== TESTING AUTHENTICATION RESULT DTO COMPLIANCE ==="
+        
+        if [ -f "tests/application/dtos/test_authentication_result_dto.py" ]; then
+          python -m pytest tests/application/dtos/test_authentication_result_dto.py -v --tb=short -p no:django
+        else
+          echo "⚠️  AuthenticationResultDto tests not yet implemented"
         fi
     
     - name: Test LeaderboardDto
