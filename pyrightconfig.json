@@ -1,0 +1,23 @@
+{
+    "include": [
+        "src",
+        "manage.py"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        ".git",
+        ".venv",
+        "dist",
+        "build"
+    ],
+    "venvPath": "/home/mirukibs/miniconda3/envs",
+    "venv": "social_scoring",
+    "pythonVersion": "3.11",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "autoSearchPaths": true,
+    "extraPaths": [
+        "/home/mirukibs/miniconda3/envs/social_scoring/lib/python3.11/site-packages"
+    ]
+}
