@@ -1,0 +1,445 @@
+@startuml PresentationLayer
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+title Presentation Layer - RESTful API Design (Exposes Application Services via HTTP)
+
+' =======================
+' HTTP CONTROLLERS (Resource-based REST APIs)
+' =======================
+package "HTTP Controllers" <<Web>> {
+    
+    class PersonController {
+        +registerPerson(request : RegisterPersonRequest) : RegisterPersonResponse
+        +authenticateUser(request : AuthenticateUserRequest) : AuthenticateUserResponse
+        +getCurrentUserProfile(auth : AuthContext) : PersonProfileResponse
+        +getPersonProfile(personId : string, auth : AuthContext) : PersonProfileResponse
+        +getLeaderboard(auth : AuthContext) : LeaderboardResponse
+        -personService : PersonApplicationService
+        -authMiddleware : AuthenticationMiddleware
+    }
+    
+    class ActivityController {
+        +createActivity(request : CreateActivityRequest, auth : AuthContext) : CreateActivityResponse
+        +getActiveActivities(auth : AuthContext) : ActivityListResponse
+        +getActivityDetails(activityId : string, auth : AuthContext) : ActivityDetailsResponse
+        +deactivateActivity(activityId : string, auth : AuthContext) : DeactivateActivityResponse
+        -activityService : ActivityApplicationService
+        -authMiddleware : AuthenticationMiddleware
+    }
+    
+    class ActionController {
+        +submitAction(request : SubmitActionRequest, auth : AuthContext) : SubmitActionResponse
+        +getPendingValidations(auth : AuthContext) : PendingValidationsResponse
+        +getMyActions(auth : AuthContext) : ActionListResponse
+        +getPersonActions(personId : string, auth : AuthContext) : ActionListResponse
+        +validateProof(actionId : string, request : ValidateProofRequest, auth : AuthContext) : ValidateProofResponse
+        -actionService : ActionApplicationService
+        -authMiddleware : AuthenticationMiddleware
+    }
+}
+
+' =======================
+' HTTP MIDDLEWARE & SECURITY
+' =======================
+package "HTTP Middleware" <<Security>> {
+    
+    class AuthenticationMiddleware {
+        +extractAuthContext(headers : HttpHeaders) : AuthenticationContext
+        +createJwtToken(personId : PersonId, email : string, roles : List<Role>) : string
+        +validateJwtToken(token : string) : TokenClaims
+        +requireAuthentication(request : HttpRequest) : AuthenticationContext
+        +requireRole(roles : List<Role>, request : HttpRequest) : AuthenticationContext
+        -jwtSecret : string
+        -tokenExpiry : Duration
+    }
+    
+    class CorsMiddleware {
+        +handleCorsHeaders(request : HttpRequest, response : HttpResponse) : void
+        +handlePreflightRequest(request : HttpRequest) : HttpResponse
+        -allowedOrigins : List<string>
+        -allowedMethods : List<string>
+        -allowedHeaders : List<string>
+    }
+    
+    class ValidationMiddleware {
+        +validateRequestBody(request : HttpRequest, schema : JsonSchema) : ValidationResult
+        +validatePathParams(request : HttpRequest, params : PathParams) : ValidationResult
+        +validateQueryParams(request : HttpRequest, params : QueryParams) : ValidationResult
+        +sanitizeInput(input : any) : any
+    }
+    
+    class ErrorHandlingMiddleware {
+        +handleApplicationException(ex : ApplicationException) : ErrorResponse
+        +handleAuthenticationException(ex : AuthenticationException) : ErrorResponse
+        +handleAuthorizationException(ex : AuthorizationException) : ErrorResponse
+        +handleValidationException(ex : ValidationException) : ErrorResponse
+        +handleGenericException(ex : Exception) : ErrorResponse
+    }
+}
+
+' =======================
+' REQUEST/RESPONSE MODELS (HTTP DTOs)
+' =======================
+package "HTTP Request Models" <<Folder>> {
+    
+    class RegisterPersonRequest {
+        +name : string
+        +email : string
+        +role : string?
+        +validate() : ValidationResult
+    }
+    
+    class AuthenticateUserRequest {
+        +email : string
+        +password : string
+        +validate() : ValidationResult
+    }
+    
+    class CreateActivityRequest {
+        +name : string
+        +description : string
+        +points : integer
+        +validate() : ValidationResult
+    }
+    
+    class SubmitActionRequest {
+        +activityId : string
+        +description : string
+        +proofHash : string
+        +validate() : ValidationResult
+    }
+    
+    class ValidateProofRequest {
+        +isValid : boolean
+        +validate() : ValidationResult
+    }
+}
+
+package "HTTP Response Models" <<Folder>> {
+    
+    class RegisterPersonResponse {
+        +personId : string
+        +message : string
+    }
+    
+    class AuthenticateUserResponse {
+        +accessToken : string
+        +refreshToken : string
+        +personId : string
+        +email : string
+        +roles : List<string>
+        +expiresAt : string
+    }
+    
+    class PersonProfileResponse {
+        +personId : string
+        +name : string
+        +email : string
+        +role : string
+        +reputationScore : integer
+    }
+    
+    class LeaderboardResponse {
+        +leaderboard : List<LeaderboardEntry>
+    }
+    
+    class LeaderboardEntry {
+        +personId : string
+        +name : string
+        +reputationScore : integer
+        +rank : integer
+    }
+    
+    class CreateActivityResponse {
+        +activityId : string
+        +message : string
+    }
+    
+    class ActivityListResponse {
+        +activities : List<ActivitySummary>
+        +totalCount : integer
+    }
+    
+    class ActivitySummary {
+        +activityId : string
+        +name : string
+        +description : string
+        +points : integer
+        +leadName : string
+        +isActive : boolean
+    }
+    
+    class ActivityDetailsResponse {
+        +activityId : string
+        +name : string
+        +description : string
+        +points : integer
+        +leadName : string
+        +isActive : boolean
+        +participantCount : integer
+        +totalActionsSubmitted : integer
+        +createdAt : string
+    }
+    
+    class SubmitActionResponse {
+        +actionId : string
+        +message : string
+    }
+    
+    class ActionListResponse {
+        +actions : List<ActionSummary>
+        +totalCount : integer
+    }
+    
+    class ActionSummary {
+        +actionId : string
+        +personName : string
+        +activityName : string
+        +description : string
+        +status : string
+        +submittedAt : string
+    }
+    
+    class PendingValidationsResponse {
+        +pendingActions : List<ActionSummary>
+        +totalCount : integer
+    }
+    
+    class ValidateProofResponse {
+        +message : string
+        +actionStatus : string
+    }
+    
+    class DeactivateActivityResponse {
+        +message : string
+    }
+    
+    class ErrorResponse {
+        +error : ErrorDetails
+    }
+    
+    class ErrorDetails {
+        +message : string
+        +code : string
+        +details : any?
+        +timestamp : string
+        +path : string
+    }
+}
+
+' =======================
+' DATA SERIALIZERS (HTTP ↔ Application DTO Mapping)
+' =======================
+package "Data Serializers" <<Component>> {
+    
+    class PersonSerializer {
+        +fromRegisterRequest(request : RegisterPersonRequest) : RegisterPersonCommand
+        +fromAuthRequest(request : AuthenticateUserRequest) : AuthenticateUserCommand
+        +toProfileResponse(dto : PersonProfileDto) : PersonProfileResponse
+        +toAuthResponse(dto : AuthenticationResultDto) : AuthenticateUserResponse
+        +toLeaderboardResponse(dtos : List<LeaderboardDto>) : LeaderboardResponse
+    }
+    
+    class ActivitySerializer {
+        +fromCreateRequest(request : CreateActivityRequest, leadId : PersonId) : CreateActivityCommand
+        +toCreateResponse(activityId : ActivityId) : CreateActivityResponse
+        +toListResponse(dtos : List<ActivityDto>) : ActivityListResponse
+        +toDetailsResponse(dto : ActivityDetailsDto) : ActivityDetailsResponse
+        +toDeactivateResponse() : DeactivateActivityResponse
+    }
+    
+    class ActionSerializer {
+        +fromSubmitRequest(request : SubmitActionRequest, personId : PersonId) : SubmitActionCommand
+        +fromValidateRequest(request : ValidateProofRequest, actionId : ActionId) : ValidateProofCommand
+        +toSubmitResponse(actionId : ActionId) : SubmitActionResponse
+        +toListResponse(dtos : List<ActionDto>) : ActionListResponse
+        +toPendingValidationsResponse(dtos : List<ActionDto>) : PendingValidationsResponse
+        +toValidateResponse() : ValidateProofResponse
+    }
+    
+    class ErrorSerializer {
+        +fromApplicationException(ex : ApplicationException) : ErrorResponse
+        +fromAuthenticationException(ex : AuthenticationException) : ErrorResponse
+        +fromAuthorizationException(ex : AuthorizationException) : ErrorResponse
+        +fromValidationException(ex : ValidationException) : ErrorResponse
+        +fromGenericException(ex : Exception, path : string) : ErrorResponse
+    }
+}
+
+' =======================
+' REST API ENDPOINTS MAPPING
+' =======================
+package "REST API Endpoints" <<Web>> {
+    
+    note as PersonEndpoints
+    **Person Management APIs:**
+    
+    POST   /api/v1/person/register
+    POST   /api/v1/person/authenticate
+    GET    /api/v1/person/profile
+    GET    /api/v1/person/profile/{personId}
+    GET    /api/v1/person/leaderboard
+    end note
+    
+    note as ActivityEndpoints
+    **Activity Management APIs:**
+    
+    POST   /api/v1/activity                   [LEAD]
+    GET    /api/v1/activity                   [AUTH]
+    GET    /api/v1/activity/{activityId}      [AUTH]
+    POST   /api/v1/activity/{activityId}/deactivate [OWNER]
+    end note
+    
+    note as ActionEndpoints
+    **Action Management APIs:**
+    
+    POST   /api/v1/action                     [AUTH]
+    GET    /api/v1/action/pending             [LEAD]
+    GET    /api/v1/action/my-actions          [AUTH]
+    GET    /api/v1/action/person/{personId}   [AUTH]
+    POST   /api/v1/action/{actionId}/validate [LEAD]
+    end note
+    
+    note as SystemEndpoints
+    **System APIs:**
+    
+    GET    /health                            [PUBLIC]
+    GET    /api/v1/info                       [PUBLIC]
+    end note
+}
+
+' =======================
+' HTTP FRAMEWORK INTEGRATION
+' =======================
+package "HTTP Framework" <<Infrastructure>> {
+    
+    class FlaskApplication {
+        +registerBlueprints(controllers : List<Controller>) : void
+        +configureMiddleware(middleware : List<Middleware>) : void
+        +configureErrorHandlers(handlers : List<ErrorHandler>) : void
+        +configureCors(corsConfig : CorsConfig) : void
+        +run(host : string, port : integer) : void
+    }
+    
+    class RequestContext {
+        +request : HttpRequest
+        +response : HttpResponse
+        +authContext : AuthenticationContext?
+        +validationErrors : List<ValidationError>
+    }
+    
+    class HttpRequest {
+        +method : HttpMethod
+        +path : string
+        +headers : HttpHeaders
+        +body : any
+        +pathParams : Map<string, string>
+        +queryParams : Map<string, string>
+    }
+    
+    class HttpResponse {
+        +statusCode : integer
+        +headers : HttpHeaders
+        +body : any
+        +contentType : string
+    }
+}
+
+' =======================
+' INTEGRATION WITH APPLICATION LAYER
+' =======================
+
+' Controllers → Application Services
+PersonController ..> PersonApplicationService : "delegates business operations"
+ActivityController ..> ActivityApplicationService : "delegates business operations" 
+ActionController ..> ActionApplicationService : "delegates business operations"
+
+' Middleware → Application Security
+AuthenticationMiddleware ..> AuthenticationContext : "creates from JWT"
+AuthenticationMiddleware ..> AuthorizationService : "validates permissions"
+
+' Serializers → Application DTOs
+PersonSerializer ..> RegisterPersonCommand : "converts to"
+PersonSerializer ..> AuthenticateUserCommand : "converts to"
+PersonSerializer ..> PersonProfileDto : "converts from"
+PersonSerializer ..> AuthenticationResultDto : "converts from"
+PersonSerializer ..> LeaderboardDto : "converts from"
+
+ActivitySerializer ..> CreateActivityCommand : "converts to"
+ActivitySerializer ..> DeactivateActivityCommand : "converts to"
+ActivitySerializer ..> ActivityDto : "converts from"
+ActivitySerializer ..> ActivityDetailsDto : "converts from"
+
+ActionSerializer ..> SubmitActionCommand : "converts to"
+ActionSerializer ..> ValidateProofCommand : "converts to"
+ActionSerializer ..> ActionDto : "converts from"
+
+' Controllers → Serializers
+PersonController ..> PersonSerializer : "uses for data mapping"
+ActivityController ..> ActivitySerializer : "uses for data mapping"
+ActionController ..> ActionSerializer : "uses for data mapping"
+
+' Error Handling
+ErrorHandlingMiddleware ..> ErrorSerializer : "formats error responses"
+ErrorSerializer ..> AuthenticationException : "handles"
+ErrorSerializer ..> AuthorizationException : "handles"
+
+' Framework Integration
+FlaskApplication --> PersonController : "registers routes"
+FlaskApplication --> ActivityController : "registers routes"
+FlaskApplication --> ActionController : "registers routes"
+FlaskApplication --> AuthenticationMiddleware : "applies globally"
+FlaskApplication --> CorsMiddleware : "applies globally"
+FlaskApplication --> ValidationMiddleware : "applies per route"
+FlaskApplication --> ErrorHandlingMiddleware : "handles exceptions"
+
+' =======================
+' SECURITY & AUTHORIZATION FLOW
+' =======================
+
+note as SecurityFlow
+**Security Flow Example:**
+
+1. **HTTP Request** → AuthenticationMiddleware
+2. **JWT Token** → AuthenticationContext creation  
+3. **Role Check** → AuthorizationService validation
+4. **Request** → Controller → Application Service
+5. **Response** → Serializer → HTTP Response
+
+**Authorization Annotations:**
+• [PUBLIC] - No authentication required
+• [AUTH] - Authentication required
+• [LEAD] - LEAD role required
+• [OWNER] - Resource ownership required
+end note
+
+' =======================
+' DEVELOPER NOTES
+' =======================
+
+note top of PersonController : "**REST Resource:**\n• Handles person/user operations\n• Public registration & auth\n• Protected profile operations\n• Optional auth for leaderboard"
+
+note top of ActivityController : "**REST Resource:**\n• Handles activity operations\n• LEAD role for creation\n• Auth required for viewing\n• Owner permissions for management"
+
+note top of ActionController : "**REST Resource:**\n• Handles action operations\n• Auth required for submission\n• LEAD role for validation\n• Owner access for viewing"
+
+note top of AuthenticationMiddleware : "**Security Layer:**\n• JWT token validation\n• AuthenticationContext creation\n• Role-based route protection\n• CORS handling"
+
+note bottom of PersonSerializer : "**Data Translation:**\nConverts between HTTP requests/responses\nand Application layer Commands/DTOs"
+
+note bottom of FlaskApplication : "**HTTP Framework:**\nOrchestrates all HTTP concerns\nand delegates to application layer"
+
+note as ArchitecturalPrinciples
+**Presentation Layer Principles:**
+
+• **Single Responsibility**: Each controller handles one domain
+• **Stateless**: No session state, only JWT tokens
+• **Resource-Based**: RESTful URL design
+• **Security-First**: Authentication/authorization at HTTP level
+• **Clean Separation**: Pure HTTP concerns, delegate to application
+• **Error Consistency**: Standardized error response format
+• **Validation**: Input validation before application layer
+• **Documentation**: Self-documenting API with clear contracts
+end note
+
+@enduml

@@ -1,0 +1,23 @@
+# Requirements for Social Scoring System Presentation Layer
+# Core Flask dependencies
+flask==2.3.3
+flask-cors==4.0.0
+
+# JWT handling  
+PyJWT==2.8.0
+
+# Development dependencies
+python-dotenv==1.0.0
+
+# Testing (if needed)
+pytest==7.4.2
+pytest-cov==4.1.0
+
+# Optional: Database support (uncomment as needed)
+# flask-sqlalchemy==3.1.1
+# psycopg2-binary==2.9.7  # PostgreSQL
+# pymongo==4.5.0          # MongoDB
+
+# Optional: Production server
+# gunicorn==21.2.0
+# uwsgi==2.0.22
