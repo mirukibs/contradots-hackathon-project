@@ -1,17 +1,4 @@
 const API_URL = "http://localhost:8000/api"; // adjust to your backend
-import { getAuthHeader } from "../api/auth";
-
-async function fetchProtectedData() {
-  const res = await fetch("http://localhost:8000/api/protected-route/", {
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeader(),
-    },
-  });
-  const json = await res.json();
-  return json;
-}
-
 
 export async function registerUser(data) {
   try {
