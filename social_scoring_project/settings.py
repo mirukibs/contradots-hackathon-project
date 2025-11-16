@@ -1,20 +1,19 @@
 """
-Django settings for the Social Scoring System infrastructure.
+Django project settings for the Social Scoring System.
 
-This module provides Django configuration for the infrastructure layer,
-including database settings, Knox authentication, and application registration.
+This is the main Django project configuration that orchestrates
+the infrastructure and presentation layers.
 """
 
 import os
 from pathlib import Path
-from datetime import timedelta
 from typing import Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-for-social-scoring-system')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-in-production-123')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -33,33 +32,34 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'knox',
     'corsheaders',
 ]
 
 LOCAL_APPS = [
-    'src.infrastructure.django_app',
+    'src.infrastructure.django_app',  # Infrastructure layer
+    # Presentation layer is included via URL routing, not as an app
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'src.presentation.middleware.AuthenticationContextMiddleware',  # Temporarily disabled
 ]
 
-ROOT_URLCONF = 'src.infrastructure.django_app.urls'
+ROOT_URLCONF = 'social_scoring_project.urls'
 
-TEMPLATES: list[dict[str, Any]] = [
+TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,11 +72,9 @@ TEMPLATES: list[dict[str, Any]] = [
     },
 ]
 
-WSGI_APPLICATION = 'src.infrastructure.django_app.wsgi.application'
+WSGI_APPLICATION = 'social_scoring_project.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -92,12 +90,10 @@ DATABASES = {
 if DEBUG and not os.environ.get('DB_NAME'):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': str(BASE_DIR / 'db.sqlite3'),  # Convert Path to string
+        'NAME': str(BASE_DIR / 'db.sqlite3'),
     }
 
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -114,28 +110,25 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = str(BASE_DIR / 'staticfiles')
+STATICFILES_DIRS = [
+    str(BASE_DIR / 'static'),
+]
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Django REST Framework configuration
-REST_FRAMEWORK: dict[str, Any] = {
+REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'knox.auth.TokenAuthentication',
+        # 'src.presentation.middleware.TokenAuthentication',  # Temporarily disabled
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -144,43 +137,38 @@ REST_FRAMEWORK: dict[str, Any] = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'login': '10/min',
+        'register': '5/min',
+    },
+    'EXCEPTION_HANDLER': 'src.presentation.api.exceptions.custom_exception_handler',
 }
 
-# Knox authentication settings
-REST_KNOX: dict[str, Any] = {
-    'SECURE_HASH_ALGORITHM': 'cryptography.hazmat.primitives.hashes.SHA512',
-    'AUTH_TOKEN_CHARACTER_LENGTH': 64,
-    'TOKEN_TTL': timedelta(hours=24),  # Token expires after 24 hours
-    'USER_SERIALIZER': 'src.infrastructure.auth.serializers.UserSerializer',
-    'TOKEN_LIMIT_PER_USER': 10,  # Maximum 10 tokens per user
-    'AUTO_REFRESH': True,
-    'EXPIRY_DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',
-}
-
-# CORS settings for frontend integration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
-    "http://127.0.0.1:3000",
-    "http://localhost:8080",  # Vue.js development server
-    "http://127.0.0.1:8080",
-    "http://localhost:4200",  # Angular development server
-    "http://127.0.0.1:4200",
-]
-
+# Add browsable API renderer for development
 if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append(
+        'rest_framework.renderers.BrowsableAPIRenderer'
+    )
+
+# CORS configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_HEADERS = [
+CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
     'authorization',
@@ -190,7 +178,16 @@ CORS_ALLOWED_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-auth-token',
 ]
+
+# Cache configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'social-scoring-cache',
+    }
+}
 
 # Logging configuration
 LOGGING: dict[str, Any] = {
@@ -201,75 +198,48 @@ LOGGING: dict[str, Any] = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
-        'simple': {
-            'format': '{levelname} {message}',
+        'api': {
+            'format': '{asctime} API {levelname} {message}',
             'style': '{',
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'social_scoring.log'),
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
+        },
+        'api_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'api',
         },
     },
     'loggers': {
-        'social_scoring': {
-            'handlers': ['file', 'console'],
+        'social_scoring.api': {
+            'handlers': ['api_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'social_scoring.infrastructure': {
+            'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
     },
 }
 
-# Create logs directory if it doesn't exist
-os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
-
-# Cache configuration (Redis for production, local memory for development)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-    } if not DEBUG else {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'social-scoring-cache',
-    }
-}
-
-# Celery configuration for background tasks
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-
-# Social Scoring System specific settings
-SOCIAL_SCORING: dict[str, Any] = {
-    'DEFAULT_MEMBER_POINTS': 0,
-    'DEFAULT_ACTIVITY_POINTS': 50,
-    'MAX_ACTIONS_PER_DAY': 10,
-    'REPUTATION_CALCULATION_INTERVAL': 3600,  # 1 hour in seconds
-    'BLOCKCHAIN_PROOF_VALIDATION': True,
-    'AUTO_APPROVE_ACTIONS': False,  # Require manual validation
-}
-
 # Security settings for production
 if not DEBUG:
+    # HTTPS settings
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -277,3 +247,11 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = 'DENY'
+    
+    # Tighter rate limiting for production
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'].update({
+        'anon': '50/hour',
+        'user': '500/hour',
+        'login': '5/min',
+        'register': '3/min',
+    })

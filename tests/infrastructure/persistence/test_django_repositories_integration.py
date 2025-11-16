@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 
 # Configure Django settings
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.infrastructure.django_app.infrastructure_settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'social_scoring_project.settings')
 django.setup()
 
 from src.infrastructure.persistence.django_repositories import (

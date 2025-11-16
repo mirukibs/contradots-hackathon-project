@@ -35,8 +35,40 @@ class DjangoAuthenticationService:
         Returns:
             True if user was registered successfully
         """
-        hashed_password = self._auth_infra.hash_password(password)
-        return self._user_store.create_user(user_id, email, hashed_password)
+        from django.contrib.auth.models import User
+        from django.db import IntegrityError
+        
+        try:
+            print(f"DJANGO AUTH: Attempting to register user {email}")
+            
+            # Check if Django user already exists
+            if User.objects.filter(email=email).exists():
+                print(f"DJANGO AUTH: Django user with email {email} already exists")
+                return False
+            
+            # Create Django User first
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                is_active=True
+            )
+            print(f"DJANGO AUTH: Created Django user {user.username}")
+            
+            # Then store in authentication infrastructure
+            hashed_password = self._auth_infra.hash_password(password)
+            auth_result = self._user_store.create_user(user_id, email, hashed_password)
+            print(f"DJANGO AUTH: InMemory store result: {auth_result}")
+            
+            return auth_result
+            
+        except IntegrityError as e:
+            # User already exists
+            print(f"DJANGO AUTH: IntegrityError - User already exists: {e}")
+            return False
+        except Exception as e:
+            print(f"DJANGO AUTH: Registration error: {e}")
+            return False
     
     def authenticate_user(self, email: str, password: str) -> Optional[str]:
         """

@@ -13,7 +13,7 @@ from unittest.mock import patch, Mock
 from typing import Optional
 
 # Configure Django before imports
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.infrastructure.django_app.infrastructure_settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'social_scoring_project.settings')
 import django
 django.setup()
 

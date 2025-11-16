@@ -148,31 +148,27 @@ class DjangoPersonRepository(PersonRepository):
     
     def _create_profile_from_person(self, person: Person) -> PersonProfile:
         """Create Django PersonProfile from domain Person."""
-        # Try to find existing Django user first
+        # Find existing Django user (should exist from authentication system)
         try:
             user = User.objects.get(email=person.email)
             # Check if this user already has a profile
             try:
                 existing_profile = PersonProfile.objects.get(user=user)
-                # User already has a profile, update it instead
+                # User already has a profile, update it instead of creating new
                 existing_profile.person_id = person.person_id.value
                 existing_profile.role = person.role.value
                 existing_profile.full_name = person.name
                 existing_profile.reputation_score = person.reputation_score
+                existing_profile.is_active = True
                 return existing_profile
             except ObjectDoesNotExist:
-                # User exists but no profile yet, create one
+                # User exists but no profile yet, this is the expected case for registration
                 pass
         except ObjectDoesNotExist:
-            # Create Django user if it doesn't exist
-            user = User.objects.create_user(
-                username=person.email,
-                email=person.email,
-                first_name=person.name,
-                is_active=True
-            )
+            # This shouldn't happen - authentication should create Django User first
+            raise ValueError(f"Django user for email {person.email} does not exist. Authentication must be completed first.")
         
-        # Create profile
+        # Create profile for existing user
         profile = PersonProfile(
             user=user,
             person_id=person.person_id.value,
@@ -369,6 +365,47 @@ class DjangoActionRepository(ActionRepository):
         except ObjectDoesNotExist:
             # Already deleted or never existed
             pass
+    
+    def find_by_person_id(self, person_id: PersonId) -> List[DomainAction]:
+        """
+        Find all Actions submitted by a specific Person.
+        
+        Args:
+            person_id: The unique identifier of the person
+            
+        Returns:
+            List of Actions submitted by the person
+        """
+        return self.find_actions_by_person(person_id)
+    
+    def find_by_activity_id(self, activity_id: ActivityId) -> List[DomainAction]:
+        """
+        Find all Actions associated with a specific Activity.
+        
+        Args:
+            activity_id: The unique identifier of the activity
+            
+        Returns:
+            List of Actions associated with the activity
+        """
+        return self.find_actions_by_activity(activity_id)
+    
+    def find_verified_by_person_id(self, person_id: PersonId) -> List[DomainAction]:
+        """
+        Find all verified Actions by a specific Person.
+        
+        Args:
+            person_id: The unique identifier of the person
+            
+        Returns:
+            List of verified Actions by the person
+        """
+        models = ActionModel.objects.filter(
+            person__person_id=person_id.value,
+            status=ActionModel.VALIDATED
+        ).order_by('-validated_at')
+        
+        return [self._to_domain_action(model) for model in models]
     
     def find_actions_by_person(self, person_id: PersonId) -> List[DomainAction]:
         """
