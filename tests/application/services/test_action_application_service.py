@@ -6,6 +6,7 @@ from src.application.services.action_application_service import ActionApplicatio
 from src.application.commands.submit_action_command import SubmitActionCommand
 from src.application.commands.validate_proof_command import ValidateProofCommand
 from src.application.dtos.action_dto import ActionDto
+from src.application.security.authentication_context import AuthenticationContext
 from src.domain.shared.value_objects.person_id import PersonId
 from src.domain.shared.value_objects.activity_id import ActivityId
 from src.domain.shared.value_objects.action_id import ActionId
@@ -24,19 +25,27 @@ class TestActionApplicationService:
         self.mock_action_query_repo = Mock()
         self.mock_activity_repo = Mock()
         self.mock_event_publisher = Mock()
+        self.mock_authorization_service = Mock()
+        
+        # Test data
+        self.valid_person_id = PersonId.generate()
+        self.valid_activity_id = ActivityId.generate()
+        self.valid_action_id = ActionId.generate()
+        
+        # Create mock authentication context
+        self.mock_auth_context = Mock(spec=AuthenticationContext)
+        self.mock_auth_context.is_authenticated = True
+        self.mock_auth_context.current_user_id = self.valid_person_id  # Use same person_id for consistency
+        self.mock_auth_context.email = "test@example.com"
         
         # Create service instance
         self.service = ActionApplicationService(
             action_repo=self.mock_action_repo,
             action_query_repo=self.mock_action_query_repo,
             activity_repo=self.mock_activity_repo,
-            event_publisher=self.mock_event_publisher
+            event_publisher=self.mock_event_publisher,
+            authorization_service=self.mock_authorization_service
         )
-        
-        # Test data
-        self.valid_person_id = PersonId.generate()
-        self.valid_activity_id = ActivityId.generate()
-        self.valid_action_id = ActionId.generate()
         
         # Create test activity
         self.test_activity = Activity(
@@ -72,7 +81,7 @@ class TestActionApplicationService:
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
         
         # Act
-        result = self.service.submit_action(self.valid_submit_command)
+        result = self.service.submit_action(self.valid_submit_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActionId)
@@ -94,7 +103,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.submit_action(self.valid_submit_command)
+            self.service.submit_action(self.valid_submit_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert f"Activity not found: {self.valid_activity_id}" in str(e)
@@ -116,7 +125,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.submit_action(invalid_command)
+            self.service.submit_action(invalid_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert "Description is required and cannot be empty" in str(e)
@@ -139,7 +148,7 @@ class TestActionApplicationService:
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
         
         # Act
-        result = self.service.submit_action(long_command)
+        result = self.service.submit_action(long_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActionId)
@@ -159,7 +168,7 @@ class TestActionApplicationService:
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
         
         # Act
-        result = self.service.submit_action(special_command)
+        result = self.service.submit_action(special_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActionId)
@@ -190,7 +199,7 @@ class TestActionApplicationService:
         
         try:
             # Act
-            result = self.service.submit_action(self.valid_submit_command)
+            result = self.service.submit_action(self.valid_submit_command, self.mock_auth_context)
             
             # Assert
             assert result == self.valid_action_id
@@ -232,7 +241,7 @@ class TestActionApplicationService:
         self.mock_action_query_repo.get_pending_validations.return_value = expected_actions
         
         # Act
-        result = self.service.get_pending_validations()
+        result = self.service.get_pending_validations(self.mock_auth_context)
         
         # Assert
         assert result == expected_actions
@@ -246,7 +255,7 @@ class TestActionApplicationService:
         self.mock_action_query_repo.get_pending_validations.return_value = []
         
         # Act
-        result = self.service.get_pending_validations()
+        result = self.service.get_pending_validations(self.mock_auth_context)
         
         # Assert
         assert result == []
@@ -277,7 +286,7 @@ class TestActionApplicationService:
         self.mock_action_query_repo.get_person_actions.return_value = expected_actions
         
         # Act
-        result = self.service.get_person_actions(self.valid_person_id)
+        result = self.service.get_person_actions(self.valid_person_id, self.mock_auth_context)
         
         # Assert
         assert result == expected_actions
@@ -291,7 +300,7 @@ class TestActionApplicationService:
         self.mock_action_query_repo.get_person_actions.return_value = []
         
         # Act
-        result = self.service.get_person_actions(self.valid_person_id)
+        result = self.service.get_person_actions(self.valid_person_id, self.mock_auth_context)
         
         # Assert
         assert result == []
@@ -304,7 +313,7 @@ class TestActionApplicationService:
         self.mock_action_repo.find_by_id.return_value = self.test_action
         
         # Act
-        self.service.simulate_proof_validation(self.valid_validate_command)
+        self.service.simulate_proof_validation(self.valid_validate_command, self.mock_auth_context)
         
         # Assert
         self.mock_action_repo.find_by_id.assert_called_once_with(self.valid_action_id)
@@ -330,7 +339,7 @@ class TestActionApplicationService:
         self.mock_action_repo.find_by_id.return_value = self.test_action
         
         # Act
-        self.service.simulate_proof_validation(invalid_command)
+        self.service.simulate_proof_validation(invalid_command, self.mock_auth_context)
         
         # Assert
         self.mock_action_repo.find_by_id.assert_called_once_with(self.valid_action_id)
@@ -348,7 +357,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.simulate_proof_validation(self.valid_validate_command)
+            self.service.simulate_proof_validation(self.valid_validate_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert f"Action not found: {self.valid_action_id}" in str(e)
@@ -369,7 +378,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.simulate_proof_validation(invalid_command)
+            self.service.simulate_proof_validation(invalid_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError:
             # Command validation should fail
@@ -386,7 +395,8 @@ class TestActionApplicationService:
             action_repo=self.mock_action_repo,
             action_query_repo=self.mock_action_query_repo,
             activity_repo=self.mock_activity_repo,
-            event_publisher=self.mock_event_publisher
+            event_publisher=self.mock_event_publisher,
+            authorization_service=self.mock_authorization_service
         )
         
         # Verify dependencies are stored (using reflection for testing)
@@ -394,6 +404,7 @@ class TestActionApplicationService:
         assert service.__dict__.get('_action_query_repo') is self.mock_action_query_repo
         assert service.__dict__.get('_activity_repo') is self.mock_activity_repo
         assert service.__dict__.get('_event_publisher') is self.mock_event_publisher
+        assert service.__dict__.get('_authorization_service') is self.mock_authorization_service
 
     def test_submit_action_repository_exception_handling(self):
         """Test handling of repository exceptions during action submission"""
@@ -403,7 +414,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.submit_action(self.valid_submit_command)
+            self.service.submit_action(self.valid_submit_command, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database connection error" in str(e)
@@ -415,7 +426,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_pending_validations()
+            self.service.get_pending_validations(self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Query service unavailable" in str(e)
@@ -427,7 +438,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_person_actions(self.valid_person_id)
+            self.service.get_person_actions(self.valid_person_id, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database error" in str(e)
@@ -440,7 +451,7 @@ class TestActionApplicationService:
         
         # Act & Assert
         try:
-            self.service.simulate_proof_validation(self.valid_validate_command)
+            self.service.simulate_proof_validation(self.valid_validate_command, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Event publisher error" in str(e)
@@ -452,19 +463,19 @@ class TestActionApplicationService:
         
         commands = [
             SubmitActionCommand(
-                personId=PersonId.generate(),
+                personId=self.valid_person_id,  # Use the authenticated user's ID
                 activityId=self.valid_activity_id,
                 description="Action 1: Cleaned north section",
                 proofHash="abc123def456789abc123def456789ab"
             ),
             SubmitActionCommand(
-                personId=PersonId.generate(),
+                personId=self.valid_person_id,  # Use the authenticated user's ID
                 activityId=self.valid_activity_id,
                 description="Action 2: Cleaned south section", 
                 proofHash="def456789abc123def456789abc123de"
             ),
             SubmitActionCommand(
-                personId=PersonId.generate(),
+                personId=self.valid_person_id,  # Use the authenticated user's ID
                 activityId=self.valid_activity_id,
                 description="Action 3: Organized trash sorting",
                 proofHash="123456789abcdef123456789abcdef12"
@@ -474,7 +485,7 @@ class TestActionApplicationService:
         # Act
         results: List[ActionId] = []
         for command in commands:
-            result = self.service.submit_action(command)
+            result = self.service.submit_action(command, self.mock_auth_context)
             results.append(result)
             assert isinstance(result, ActionId)
         
@@ -505,7 +516,7 @@ class TestActionApplicationService:
         
         try:
             # Act
-            self.service.submit_action(self.valid_submit_command)
+            self.service.submit_action(self.valid_submit_command, self.mock_auth_context)
             
             # Assert
             assert self.mock_event_publisher.publish.call_count == 3
@@ -535,7 +546,7 @@ class TestActionApplicationService:
         )
         
         # Act
-        self.service.simulate_proof_validation(validate_command)
+        self.service.simulate_proof_validation(validate_command, self.mock_auth_context)
         
         # Assert
         published_event = self.mock_event_publisher.publish.call_args[0][0]
@@ -559,14 +570,14 @@ class TestActionApplicationService:
         
         for i, hash_format in enumerate(hash_formats):
             command = SubmitActionCommand(
-                personId=PersonId.generate(),
+                personId=self.valid_person_id,  # Use the authenticated user's ID
                 activityId=self.valid_activity_id,
                 description=f"Test action {i+1}",
                 proofHash=hash_format
             )
             
             # Act
-            result = self.service.submit_action(command)
+            result = self.service.submit_action(command, self.mock_auth_context)
             
             # Assert
             assert isinstance(result, ActionId)

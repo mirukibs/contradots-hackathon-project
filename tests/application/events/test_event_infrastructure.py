@@ -11,7 +11,7 @@ from src.domain.shared.events.domain_event import DomainEvent
 
 
 # Test implementations for interface testing
-class TestDomainEvent(DomainEvent):
+class MockDomainEvent(DomainEvent):
     """Test domain event implementation"""
     
     def __init__(self, aggregate_id: UUID, test_data: str = "test"):
@@ -50,17 +50,17 @@ class ConcreteEventStore(EventStore):
         return self._events.copy()
 
 
-class ConcreteEventHandler(EventHandler[TestDomainEvent]):
+class ConcreteEventHandler(EventHandler[MockDomainEvent]):
     """Concrete test implementation of EventHandler"""
     
     def __init__(self):
-        self.handled_events: List[TestDomainEvent] = []
+        self.handled_events: List[MockDomainEvent] = []
         
-    def handle(self, event: TestDomainEvent) -> None:
+    def handle(self, event: MockDomainEvent) -> None:
         self.handled_events.append(event)
     
     def can_handle(self, event: DomainEvent) -> bool:
-        return isinstance(event, TestDomainEvent)
+        return isinstance(event, MockDomainEvent)
 
 
 class ConcreteEventPublisher(EventPublisher):
@@ -113,8 +113,8 @@ class TestEventStoreImplementation:
         """Set up test fixtures"""
         self.event_store = ConcreteEventStore()
         self.aggregate_id = uuid4()
-        self.test_event1 = TestDomainEvent(self.aggregate_id, "event1")
-        self.test_event2 = TestDomainEvent(self.aggregate_id, "event2")
+        self.test_event1 = MockDomainEvent(self.aggregate_id, "event1")
+        self.test_event2 = MockDomainEvent(self.aggregate_id, "event2")
         
     def test_event_store_append_single_event(self):
         """Test appending a single event to the store"""
@@ -145,7 +145,7 @@ class TestEventStoreImplementation:
         """Test storing events for multiple aggregates"""
         # Arrange
         aggregate_id2 = uuid4()
-        event3 = TestDomainEvent(aggregate_id2, "event3")
+        event3 = MockDomainEvent(aggregate_id2, "event3")
         
         # Act
         self.event_store.append(self.aggregate_id, [self.test_event1])
@@ -222,7 +222,7 @@ class TestEventHandlerImplementation:
         """Set up test fixtures"""
         self.handler = ConcreteEventHandler()
         self.aggregate_id = uuid4()
-        self.test_event = TestDomainEvent(self.aggregate_id, "test_data")
+        self.test_event = MockDomainEvent(self.aggregate_id, "test_data")
         
     def test_event_handler_handle_valid_event(self):
         """Test handling a valid event"""
@@ -255,8 +255,8 @@ class TestEventHandlerImplementation:
     def test_event_handler_handle_multiple_events(self):
         """Test handling multiple events"""
         # Arrange
-        event2 = TestDomainEvent(self.aggregate_id, "test_data2")
-        event3 = TestDomainEvent(self.aggregate_id, "test_data3")
+        event2 = MockDomainEvent(self.aggregate_id, "test_data2")
+        event3 = MockDomainEvent(self.aggregate_id, "test_data3")
         
         # Act
         self.handler.handle(self.test_event)
@@ -279,7 +279,7 @@ class TestEventPublisherImplementation:
         self.publisher = ConcreteEventPublisher(self.event_store)
         self.handler = ConcreteEventHandler()
         self.aggregate_id = uuid4()
-        self.test_event = TestDomainEvent(self.aggregate_id, "test_data")
+        self.test_event = MockDomainEvent(self.aggregate_id, "test_data")
         
     def test_event_publisher_publish_single_event(self):
         """Test publishing a single event"""
@@ -305,7 +305,7 @@ class TestEventPublisherImplementation:
     def test_event_publisher_publish_multiple_events(self):
         """Test publishing multiple events"""
         # Arrange
-        event2 = TestDomainEvent(self.aggregate_id, "test_data2")
+        event2 = MockDomainEvent(self.aggregate_id, "test_data2")
         self.publisher.add_handler(self.handler)  # type: ignore
         
         # Act
@@ -401,7 +401,7 @@ class TestEventPublisherImplementation:
         """Test full integration between publisher and event store"""
         # Arrange
         aggregate_id2 = uuid4()
-        event2 = TestDomainEvent(aggregate_id2, "different_aggregate")
+        event2 = MockDomainEvent(aggregate_id2, "different_aggregate")
         
         # Act
         self.publisher.publish(self.test_event)
@@ -433,7 +433,7 @@ class TestEventInfrastructureIntegration:
         
         # Test data
         self.aggregate_id = uuid4()
-        self.test_event = TestDomainEvent(self.aggregate_id, "integration_test")
+        self.test_event = MockDomainEvent(self.aggregate_id, "integration_test")
     
     def test_full_event_flow_integration(self):
         """Test complete event flow from publishing to handling to storage"""
@@ -486,9 +486,9 @@ class TestEventInfrastructureIntegration:
         aggregate_id2 = uuid4()
         aggregate_id3 = uuid4()
         
-        event1 = TestDomainEvent(self.aggregate_id, "agg1_event")
-        event2 = TestDomainEvent(aggregate_id2, "agg2_event")
-        event3 = TestDomainEvent(aggregate_id3, "agg3_event")
+        event1 = MockDomainEvent(self.aggregate_id, "agg1_event")
+        event2 = MockDomainEvent(aggregate_id2, "agg2_event")
+        event3 = MockDomainEvent(aggregate_id3, "agg3_event")
         
         self.publisher.add_handler(self.handler)  # type: ignore
         

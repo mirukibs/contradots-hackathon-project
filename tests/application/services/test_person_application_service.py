@@ -6,6 +6,7 @@ from src.application.services.person_application_service import PersonApplicatio
 from src.application.commands.register_person_command import RegisterPersonCommand
 from src.application.dtos.person_profile_dto import PersonProfileDto
 from src.application.dtos.leaderboard_dto import LeaderboardDto
+from src.application.security.authentication_context import AuthenticationContext
 from src.domain.shared.value_objects.person_id import PersonId
 from src.domain.person.person import Person
 from src.domain.person.role import Role
@@ -19,12 +20,20 @@ class TestPersonApplicationService:
         # Create mock repositories
         self.mock_person_repo = Mock()
         self.mock_leaderboard_query_repo = Mock()
+        self.mock_authorization_service = Mock()
         
         # Create service instance
         self.service = PersonApplicationService(
             person_repo=self.mock_person_repo,
-            leaderboard_query_repo=self.mock_leaderboard_query_repo
+            leaderboard_query_repo=self.mock_leaderboard_query_repo,
+            authorization_service=self.mock_authorization_service
         )
+        
+        # Create mock authentication context
+        self.mock_auth_context = Mock(spec=AuthenticationContext)
+        self.mock_auth_context.is_authenticated = True
+        self.mock_auth_context.current_user_id = PersonId.generate()
+        self.mock_auth_context.email = "test@example.com"
         
         # Test data
         self.valid_person_id = PersonId.generate()
@@ -161,7 +170,7 @@ class TestPersonApplicationService:
         self.mock_person_repo.find_by_id.return_value = test_person
         
         # Act
-        result = self.service.get_person_profile(self.valid_person_id)
+        result = self.service.get_person_profile(self.valid_person_id, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, PersonProfileDto)
@@ -180,7 +189,7 @@ class TestPersonApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_person_profile(self.valid_person_id)
+            self.service.get_person_profile(self.valid_person_id, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert f"Person not found: {self.valid_person_id}" in str(e)
@@ -201,7 +210,7 @@ class TestPersonApplicationService:
         self.mock_person_repo.find_by_id.return_value = test_person
         
         # Act
-        result = self.service.get_person_profile(self.valid_person_id)
+        result = self.service.get_person_profile(self.valid_person_id, self.mock_auth_context)
         
         # Assert
         assert result.reputationScore == 0
@@ -220,7 +229,7 @@ class TestPersonApplicationService:
         self.mock_person_repo.find_by_id.return_value = test_person
         
         # Act
-        result = self.service.get_person_profile(self.valid_person_id)
+        result = self.service.get_person_profile(self.valid_person_id, self.mock_auth_context)
         
         # Assert
         assert result.reputationScore == -25
@@ -252,7 +261,7 @@ class TestPersonApplicationService:
         self.mock_leaderboard_query_repo.get_leaderboard.return_value = expected_leaderboard
         
         # Act
-        result = self.service.get_leaderboard()
+        result = self.service.get_leaderboard(self.mock_auth_context)
         
         # Assert
         assert result == expected_leaderboard
@@ -268,7 +277,7 @@ class TestPersonApplicationService:
         self.mock_leaderboard_query_repo.get_leaderboard.return_value = []
         
         # Act
-        result = self.service.get_leaderboard()
+        result = self.service.get_leaderboard(self.mock_auth_context)
         
         # Assert
         assert result == []
@@ -291,7 +300,7 @@ class TestPersonApplicationService:
         self.mock_leaderboard_query_repo.get_leaderboard.return_value = single_user_leaderboard
         
         # Act
-        result = self.service.get_leaderboard()
+        result = self.service.get_leaderboard(self.mock_auth_context)
         
         # Assert
         assert len(result) == 1
@@ -337,12 +346,14 @@ class TestPersonApplicationService:
         # Create new service instance
         service = PersonApplicationService(
             person_repo=self.mock_person_repo,
-            leaderboard_query_repo=self.mock_leaderboard_query_repo
+            leaderboard_query_repo=self.mock_leaderboard_query_repo,
+            authorization_service=self.mock_authorization_service
         )
         
         # Verify dependencies are stored (using reflection for testing)
         assert service.__dict__.get('_person_repo') is self.mock_person_repo
         assert service.__dict__.get('_leaderboard_query_repo') is self.mock_leaderboard_query_repo
+        assert service.__dict__.get('_authorization_service') is self.mock_authorization_service
 
     def test_register_person_repository_exception_handling(self):
         """Test handling of repository exceptions during registration"""
@@ -364,7 +375,7 @@ class TestPersonApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_person_profile(self.valid_person_id)
+            self.service.get_person_profile(self.valid_person_id, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database connection error" in str(e)
@@ -376,7 +387,7 @@ class TestPersonApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_leaderboard()
+            self.service.get_leaderboard(self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Query service unavailable" in str(e)

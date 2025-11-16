@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "/home/mirukibs/miniconda3/envs/social_scoring/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.extraPaths": [
+        "/home/mirukibs/miniconda3/envs/social_scoring/lib/python3.11/site-packages"
+    ],
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.typeCheckingMode": "basic"
+}

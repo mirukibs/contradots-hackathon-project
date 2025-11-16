@@ -7,6 +7,8 @@ from src.application.commands.create_activity_command import CreateActivityComma
 from src.application.commands.deactivate_activity_command import DeactivateActivityCommand
 from src.application.dtos.activity_dto import ActivityDto
 from src.application.dtos.activity_details_dto import ActivityDetailsDto
+from src.application.security.authentication_context import AuthenticationContext
+from src.application.security.authorization_exception import AuthorizationException
 from src.domain.shared.value_objects.person_id import PersonId
 from src.domain.shared.value_objects.activity_id import ActivityId
 from src.domain.activity.activity import Activity
@@ -23,17 +25,25 @@ class TestActivityApplicationService:
         self.mock_activity_repo = Mock()
         self.mock_activity_query_repo = Mock()
         self.mock_person_repo = Mock()
+        self.mock_authorization_service = Mock()
+        
+        # Test data
+        self.valid_lead_id = PersonId.generate()
+        self.valid_activity_id = ActivityId.generate()
+        
+        # Create mock authentication context
+        self.mock_auth_context = Mock(spec=AuthenticationContext)
+        self.mock_auth_context.is_authenticated = True
+        self.mock_auth_context.current_user_id = self.valid_lead_id  # Use lead id for consistency
+        self.mock_auth_context.email = "lead@example.com"
         
         # Create service instance
         self.service = ActivityApplicationService(
             activity_repo=self.mock_activity_repo,
             activity_query_repo=self.mock_activity_query_repo,
-            person_repo=self.mock_person_repo
+            person_repo=self.mock_person_repo,
+            authorization_service=self.mock_authorization_service
         )
-        
-        # Test data
-        self.valid_lead_id = PersonId.generate()
-        self.valid_activity_id = ActivityId.generate()
         
         # Create test lead
         self.test_lead = Person.create(
@@ -71,15 +81,15 @@ class TestActivityApplicationService:
 
     def test_create_activity_success(self):
         """Test successful activity creation by lead"""
-        # Arrange
-        self.mock_person_repo.find_by_id.return_value = self.test_lead
+        # Arrange - no need to arrange person_repo since it's not called directly
         
         # Act
-        result = self.service.create_activity(self.valid_create_command)
+        result = self.service.create_activity(self.valid_create_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActivityId)
-        self.mock_person_repo.find_by_id.assert_called_once_with(self.valid_lead_id)
+        # Verify authorization was called
+        self.mock_authorization_service.validate_role_permission.assert_called_once_with(self.mock_auth_context, "create_activity")
         self.mock_activity_repo.save.assert_called_once()
         
         # Verify the activity passed to save has correct attributes
@@ -89,34 +99,35 @@ class TestActivityApplicationService:
         assert saved_activity.creator_id == self.valid_lead_id
 
     def test_create_activity_lead_not_found(self):
-        """Test activity creation when lead doesn't exist"""
+        """Test activity creation when authorization fails due to person not found"""
         # Arrange
-        self.mock_person_repo.find_by_id.return_value = None
+        self.mock_authorization_service.validate_role_permission.side_effect = AuthorizationException("User not found")
         
         # Act & Assert
         try:
-            self.service.create_activity(self.valid_create_command)
-            assert False, "Should have raised ValueError"
-        except ValueError as e:
-            assert f"Lead not found: {self.valid_lead_id}" in str(e)
+            self.service.create_activity(self.valid_create_command, self.mock_auth_context)
+            assert False, "Should have raised AuthorizationException"
+        except AuthorizationException as e:
+            assert "User not found" in str(e)
         
-        # Verify repository calls
-        self.mock_person_repo.find_by_id.assert_called_once_with(self.valid_lead_id)
+        # Verify authorization was called but activity save was not
+        self.mock_authorization_service.validate_role_permission.assert_called_once_with(self.mock_auth_context, "create_activity")
         self.mock_activity_repo.save.assert_not_called()
 
     def test_create_activity_non_lead_user(self):
         """Test activity creation by non-lead user"""
         # Arrange
-        self.mock_person_repo.find_by_id.return_value = self.test_member
+        self.mock_authorization_service.validate_role_permission.side_effect = AuthorizationException("Only leads can create activities")
         
         # Act & Assert
         try:
-            self.service.create_activity(self.valid_create_command)
-            assert False, "Should have raised ValueError"
-        except ValueError as e:
+            self.service.create_activity(self.valid_create_command, self.mock_auth_context)
+            assert False, "Should have raised AuthorizationException"
+        except AuthorizationException as e:
             assert "Only leads can create activities" in str(e)
         
-        # Verify save was not called
+        # Verify authorization was called but save was not
+        self.mock_authorization_service.validate_role_permission.assert_called_once_with(self.mock_auth_context, "create_activity")
         self.mock_activity_repo.save.assert_not_called()
 
     def test_create_activity_invalid_command(self):
@@ -131,7 +142,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.create_activity(invalid_command)
+            self.service.create_activity(invalid_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert "Name is required and cannot be empty" in str(e)
@@ -152,7 +163,7 @@ class TestActivityApplicationService:
         self.mock_person_repo.find_by_id.return_value = self.test_lead
         
         # Act
-        result = self.service.create_activity(special_command)
+        result = self.service.create_activity(special_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActivityId)
@@ -184,7 +195,7 @@ class TestActivityApplicationService:
         self.mock_activity_query_repo.get_active_activities.return_value = expected_activities
         
         # Act
-        result = self.service.get_active_activities()
+        result = self.service.get_active_activities(self.mock_auth_context)
         
         # Assert
         assert result == expected_activities
@@ -198,7 +209,7 @@ class TestActivityApplicationService:
         self.mock_activity_query_repo.get_active_activities.return_value = []
         
         # Act
-        result = self.service.get_active_activities()
+        result = self.service.get_active_activities(self.mock_auth_context)
         
         # Assert
         assert result == []
@@ -221,7 +232,7 @@ class TestActivityApplicationService:
         self.mock_activity_query_repo.get_activity_details.return_value = expected_details
         
         # Act
-        result = self.service.get_activity_details(self.valid_activity_id)
+        result = self.service.get_activity_details(self.valid_activity_id, self.mock_auth_context)
         
         # Assert
         assert result == expected_details
@@ -237,7 +248,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_activity_details(self.valid_activity_id)
+            self.service.get_activity_details(self.valid_activity_id, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert f"Activity not found: {self.valid_activity_id}" in str(e)
@@ -246,15 +257,14 @@ class TestActivityApplicationService:
         """Test successful activity deactivation by creator"""
         # Arrange
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
-        self.mock_person_repo.find_by_id.return_value = self.test_lead
         
         # Act
-        self.service.deactivate_activity(self.valid_deactivate_command)
+        self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
         
         # Assert
         self.mock_activity_repo.find_by_id.assert_called_once_with(self.valid_activity_id)
-        self.mock_person_repo.find_by_id.assert_called_with(self.valid_lead_id)
-        # Verify save was called with the test activity (may be called multiple times due to setup)
+        self.mock_authorization_service.enforce_activity_ownership.assert_called_once_with(self.mock_auth_context, self.valid_activity_id)
+        # Verify save was called with the test activity
         self.mock_activity_repo.save.assert_called_with(self.test_activity)
 
     def test_deactivate_activity_not_found(self):
@@ -264,7 +274,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(self.valid_deactivate_command)
+            self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert f"Activity not found: {self.valid_activity_id}" in str(e)
@@ -286,7 +296,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(self.valid_deactivate_command)
+            self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert "Only the activity creator can deactivate the activity" in str(e)
@@ -295,35 +305,37 @@ class TestActivityApplicationService:
         self.mock_activity_repo.save.assert_not_called()
 
     def test_deactivate_activity_lead_not_found(self):
-        """Test deactivation when lead doesn't exist"""
+        """Test deactivation when authorization fails due to lead not found"""
         # Arrange
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
-        self.mock_person_repo.find_by_id.return_value = None
+        self.mock_authorization_service.enforce_activity_ownership.side_effect = AuthorizationException("User not found")
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(self.valid_deactivate_command)
-            assert False, "Should have raised ValueError"
-        except ValueError as e:
-            assert f"Lead not found: {self.valid_lead_id}" in str(e)
+            self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
+            assert False, "Should have raised AuthorizationException"
+        except AuthorizationException as e:
+            assert "User not found" in str(e)
         
-        # Verify save was not called
+        # Verify authorization was called but save was not
+        self.mock_authorization_service.enforce_activity_ownership.assert_called_once_with(self.mock_auth_context, self.valid_activity_id)
         self.mock_activity_repo.save.assert_not_called()
 
     def test_deactivate_activity_non_lead_user(self):
         """Test deactivation by non-lead user"""
         # Arrange
         self.mock_activity_repo.find_by_id.return_value = self.test_activity
-        self.mock_person_repo.find_by_id.return_value = self.test_member
+        self.mock_authorization_service.enforce_activity_ownership.side_effect = AuthorizationException("Only activity owner can deactivate")
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(self.valid_deactivate_command)
-            assert False, "Should have raised ValueError"
-        except ValueError as e:
-            assert "Only leads can deactivate activities" in str(e)
+            self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
+            assert False, "Should have raised AuthorizationException"
+        except AuthorizationException as e:
+            assert "Only activity owner can deactivate" in str(e)
         
-        # Verify save was not called
+        # Verify authorization was called but save was not
+        self.mock_authorization_service.enforce_activity_ownership.assert_called_once_with(self.mock_auth_context, self.valid_activity_id)
         self.mock_activity_repo.save.assert_not_called()
 
     def test_deactivate_activity_invalid_command(self):
@@ -338,7 +350,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(invalid_command)
+            self.service.deactivate_activity(invalid_command, self.mock_auth_context)
             assert False, "Should have raised ValueError"
         except ValueError:
             # Command validation should fail
@@ -354,13 +366,15 @@ class TestActivityApplicationService:
         service = ActivityApplicationService(
             activity_repo=self.mock_activity_repo,
             activity_query_repo=self.mock_activity_query_repo,
-            person_repo=self.mock_person_repo
+            person_repo=self.mock_person_repo,
+            authorization_service=self.mock_authorization_service
         )
         
         # Verify dependencies are stored (using reflection for testing)
         assert service.__dict__.get('_activity_repo') is self.mock_activity_repo
         assert service.__dict__.get('_activity_query_repo') is self.mock_activity_query_repo
         assert service.__dict__.get('_person_repo') is self.mock_person_repo
+        assert service.__dict__.get('_authorization_service') is self.mock_authorization_service
 
     def test_create_activity_repository_exception_handling(self):
         """Test handling of repository exceptions during creation"""
@@ -370,7 +384,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.create_activity(self.valid_create_command)
+            self.service.create_activity(self.valid_create_command, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database connection error" in str(e)
@@ -382,7 +396,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_active_activities()
+            self.service.get_active_activities(self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Query service unavailable" in str(e)
@@ -394,7 +408,7 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.get_activity_details(self.valid_activity_id)
+            self.service.get_activity_details(self.valid_activity_id, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database error" in str(e)
@@ -408,45 +422,33 @@ class TestActivityApplicationService:
         
         # Act & Assert
         try:
-            self.service.deactivate_activity(self.valid_deactivate_command)
+            self.service.deactivate_activity(self.valid_deactivate_command, self.mock_auth_context)
             assert False, "Should have raised Exception"
         except Exception as e:
             assert "Database write error" in str(e)
 
     def test_create_multiple_activities_different_leads(self):
-        """Test creating multiple activities by different leads"""
+        """Test creating multiple activities by the same authenticated lead"""
         # Arrange
-        lead1 = Person.create(name="Lead 1", email="lead1@example.com", role=Role.LEAD)
-        lead2 = Person.create(name="Lead 2", email="lead2@example.com", role=Role.LEAD)
-        
-        def mock_find_by_id(person_id: PersonId):
-            if person_id == lead1.person_id:
-                return lead1
-            elif person_id == lead2.person_id:
-                return lead2
-            return None
-        
-        self.mock_person_repo.find_by_id.side_effect = mock_find_by_id
-        
         commands = [
             CreateActivityCommand(
                 name="Activity 1",
                 description="First activity",
                 points=25,
-                leadId=lead1.person_id
+                leadId=self.valid_lead_id  # Same authenticated user
             ),
             CreateActivityCommand(
                 name="Activity 2", 
                 description="Second activity",
                 points=50,
-                leadId=lead2.person_id
+                leadId=self.valid_lead_id  # Same authenticated user
             )
         ]
         
         # Act
         results: List[ActivityId] = []
         for command in commands:
-            result = self.service.create_activity(command)
+            result = self.service.create_activity(command, self.mock_auth_context)
             results.append(result)
             assert isinstance(result, ActivityId)
         
@@ -470,7 +472,7 @@ class TestActivityApplicationService:
         self.mock_person_repo.find_by_id.return_value = lead_with_role_enum
         
         # Act
-        result = self.service.create_activity(self.valid_create_command)
+        result = self.service.create_activity(self.valid_create_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActivityId)
@@ -489,7 +491,7 @@ class TestActivityApplicationService:
         self.mock_person_repo.find_by_id.return_value = self.test_lead
         
         # Act
-        result = self.service.create_activity(long_command)
+        result = self.service.create_activity(long_command, self.mock_auth_context)
         
         # Assert
         assert isinstance(result, ActivityId)
