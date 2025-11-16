@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credora | Welcome</title>
+    <style>
+        :root{ 
+            --bgd:#040404;
+            --bg:#141414;
+            --bgl:#262626;
+            --fg:#DDC6A4;
+            --ac:#F2F2F2;
+            --cta:#6422ff;
+            --cta-h:#440dc4;
+        }
+        *,*::before,*::after{
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select:none;
+            
+            scroll-behavior: smooth;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            text-decoration: none;
+            letter-spacing: 0.2px;
+            max-width: 100dvw;
+            line-height: 1.6;
+            text-align: left;
+            color: #f2f2f2;
+            font-size: 16px;
+            outline: none;
+            padding: 0;
+            border: 0;
+            margin: 0;
+            &:not(.img *){
+                transition: all .3s ease-in-out;
+            }
+
+            input:-webkit-autofill,
+            input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+                box-shadow: 0 0 0px 1000px transparent inset !important;
+                -webkit-text-fill-color: var(--secondary2) !important;
+                transition: background-color 5000s ease-in-out 0s;
+            }
+            input:-webkit-autofill:hover,
+            input:-webkit-autofill:focus {
+                -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+                box-shadow: 0 0 0px 1000px transparent inset !important;
+                -webkit-text-fill-color: var(--tertiary) !important;
+                transition: background-color 5000s ease-in-out 0s;
+            }
+
+            /* Custom color example */
+            input:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0) inset !important; /* Custom color with opacity */
+                box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0) inset !important; /* Custom color with opacity */
+                background-color: var(--ac) !important; /* Change to your desired color */
+                color: var(--tertiary); /* Change text color if needed */
+            }
+            
+            /* Optional: To remove the default border */
+            input:-webkit-autofill:focus {
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Optional shadow */
+            }
+
+            ::-webkit-scrollbar-thumb:vertical {
+                background-color: #88888800;
+                transition: opacity 0.2s;
+                opacity: 0.8;
+            }
+            ::-webkit-scrollbar-track-piece {
+                display: none;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--tertiary); 
+            }
+            ::-webkit-scrollbar-button {
+                display: none;
+            }
+            ::-webkit-scrollbar-corner {
+                display: none;
+            }
+            ::-webkit-scrollbar-thumb {
+                background-color: var(--tertiary);
+                display: none;
+                opacity: 0;
+            }
+            ::-webkit-scrollbar-track {
+                background-color: var(--ac);
+                display: none;
+            }
+            ::-webkit-scrollbar:hover {
+                opacity: 0.8;
+            }
+            ::-webkit-scrollbar {
+                transition: opacity 0.2s;
+                display: none;
+                width: 0.5rem;
+                opacity: 0;
+            }
+        }
+        body{
+            background-color: var(--bg);
+            scroll-behavior: smooth;
+            flex-direction: column;
+            display: flex;
+            width: 100dvw;
+
+            h1,h2,h3,h4,h5,h6,b,strong{
+                text-transform: capitalize;
+                color: var(--ac);
+            }
+            h1 {      
+                font-size: 42pt;
+            }
+
+            h2 {
+                letter-spacing: -0.4px;
+                margin-bottom: 1rem;
+                line-height: 1.25;
+                font-size: 36pt;
+            }
+
+            h3 {
+                letter-spacing: -0.3px;
+                margin-bottom: 1rem;
+                line-height: 1.3;
+                font-size: 30pt;
+            }
+
+            h4 {
+                letter-spacing: -0.2px;
+                margin-bottom: 1rem;
+                line-height: 1.35;
+                font-size: 24pt;
+            }
+
+            h5 {
+                letter-spacing: -0.1px;
+                margin-bottom: 1rem;
+                line-height: 1.4;
+                font-size: 18pt;
+            }
+
+            h6 {
+                letter-spacing: 0px;
+                margin-bottom: 1rem;
+                line-height: 1.5;
+                font-size: 12pt;
+            }
+            p{
+                margin-bottom: 1em;
+            }
+        }
+        h1{
+            margin-bottom: 20px;
+            font-size: 3.2rem;
+        }
+        header {
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            position: fixed;
+            display: flex;
+            left: 0;
+            top: 0;
+        }
+        .logo b {
+            font-size: 24px;
+        }
+        .splash-page {
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            padding: 0 16px;
+            height: 100dvh;
+            display: flex;
+            width: 100%;
+            .glow {
+                position: absolute;
+                width: 400px;
+                height: 400px;
+                background: radial-gradient(circle, var(--cta) 0%, rgba(63, 210, 255, 0) 60%);
+                filter: blur(80px);
+                bottom: -200px;
+                animation: glowMove 4s infinite alternate;
+            }
+            >*{
+                text-align: center;
+                max-width: 600px;
+                width: 100%;
+                button{
+                    background-color: var(--cta);
+                    text-align: center;
+                    border-radius: 8px;
+                    padding: 10px 20px;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    color: var(--ac);
+                    font-size: 16px;
+                    width: 150px;
+                    &.outline{
+                        box-shadow: inset 0 0 0 2px var(--cta);
+                        background-color: transparent;
+                        color: var(--cta);
+                    }
+                    &:hover{
+                        box-shadow: inset 0 0 0 2px var(--cta-h);
+                        background-color: var(--cta-h);
+                        transform: translateY(-4px);
+                        color: var(--ac);
+                        cursor: pointer;
+                    }
+                }
+            }
+        }
+        @keyframes glowMove {
+            0% {
+                transform: translateY(0) translateX(0) scale(1);
+            }
+            100% {
+                transform: translateY(20px) translateX(20px) scale(1.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="logo">
+            <b>Credora</b>
+        </span>
+        <span></span>
+    </header>
+    <main class="splash-page">
+        <span class="glow"></span>
+        <h1>Welcome to Credora</h1>
+        <p>A web3 Powered Social Credit Score System</p>
+        <div class="splash-buttons">
+            <a href="/register">
+                <button class="splash-btn">Register</button>
+            </a>
+            <a href="/login">
+                <button class="splash-btn outline">Login</button>
+            </a>
+        </div>
+    </main>
+</body>
+</html>

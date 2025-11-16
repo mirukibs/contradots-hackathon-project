@@ -1,0 +1,85 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bgd: #040404;
+  --bg: #141414;
+  --bgl: #262626;
+  --fg: #DDC6A4;
+  --ac: #F2F2F2;
+  --cta: #6422ff;
+  --cta-h: #440dc4;
+}
+
+/* Reset & Globals */
+* {
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  text-decoration: none;
+  letter-spacing: 0.2px;
+  user-select: none;
+  line-height: 1.6;
+  color: #f2f2f2;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg);
+  width: 100dvw;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography */
+h1 {
+  font-size: calc(16px * 4.04);
+  margin-bottom: 20px;
+  color: var(--ac);
+}
+h2 {
+  font-size: calc(16px * 2.5);
+  margin-bottom: 16px;
+  color: var(--ac);
+}
+
+/* Header */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 16px 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+.spash-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  max-width: 334px;
+  width: 100%;
+  >button{
+    width: 220px;
+  }
+}
