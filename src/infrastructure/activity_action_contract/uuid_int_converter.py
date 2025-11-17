@@ -1,10 +1,36 @@
 """
-String and Integer Conversion Utilities
+UUID and Integer Conversion Utilities
 
-This module provides functions to convert between string and integer values
-with proper error handling and validation.
+This module provides functions to convert between UUID and integer values
+with proper error handling and validation for blockchain storage.
 """
 import uuid
+
+
+def uuid_to_int(uuid_value):
+    """
+    Convert a UUID value to an integer for blockchain storage.
+    
+    Args:
+        uuid_value: UUID object or string representation of UUID
+        
+    Returns:
+        int: The integer representation of the UUID
+        
+    Raises:
+        ValueError: If the value cannot be converted to UUID
+        TypeError: If the input type is invalid
+    """
+    if isinstance(uuid_value, uuid.UUID):
+        return int(uuid_value)
+    elif isinstance(uuid_value, str):
+        try:
+            return int(uuid.UUID(uuid_value))
+        except ValueError as e:
+            raise ValueError(f"Cannot convert '{uuid_value}' to UUID: {e}")
+    else:
+        raise TypeError(f"Expected UUID or string, got {type(uuid_value).__name__}")
+
 
 def string_to_int(value):
     """

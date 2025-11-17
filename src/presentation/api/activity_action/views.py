@@ -52,7 +52,8 @@ from ....domain.person.role import Role
 from ....infrastructure.activity_action_contract.contract_client import ActivityActionTrackerClient
 from ....infrastructure.activity_action_contract.uuid_int_converter import (
     int_to_uuid,
-    safe_int_to_uuid
+    safe_int_to_uuid,
+    uuid_to_int
 )
 import uuid as uuid_lib
 import os
@@ -172,11 +173,7 @@ def _uuid_to_int(id_obj) -> int:
     """
     if hasattr(id_obj, 'value'):
         uuid_val = id_obj.value
-        if isinstance(uuid_val, uuid_lib.UUID):
-            # .int is a property of UUID that returns the integer representation
-            return uuid_val.int  # type: ignore
-        elif isinstance(uuid_val, str):
-            return uuid_lib.UUID(uuid_val).int  # type: ignore
+        return uuid_to_int(uuid_val)
     raise ValueError(f"Cannot convert {type(id_obj)} to integer")
 
 
@@ -192,6 +189,62 @@ def _int_to_person_id(value: int) -> PersonId:
     """
     uuid_obj = int_to_uuid(value)
     return PersonId(uuid_obj)
+
+
+def _enrich_action_with_blockchain_data(action_dict: Dict[str, Any], contract_client: ActivityActionTrackerClient) -> Dict[str, Any]:
+    """
+    Enrich action data with blockchain information.
+    
+    Args:
+        action_dict: Action data dictionary
+        contract_client: Contract client instance
+        
+    Returns:
+        Enriched action dictionary
+    """
+    try:
+        action_id_int = uuid_to_int(action_dict.get('actionId', ''))
+        blockchain_action = contract_client.get_action(action_id_int)
+        
+        action_dict['blockchain'] = {
+            'personId': str(int_to_uuid(blockchain_action.person_id)),
+            'activityId': str(int_to_uuid(blockchain_action.activity_id)),
+            'description': contract_client._bytes32_to_string(blockchain_action.description),
+            'proofHash': contract_client._bytes32_to_string(blockchain_action.proof_hash),
+            'status': blockchain_action.status.name
+        }
+    except Exception as e:
+        action_dict['blockchain_warning'] = f'Blockchain data unavailable: {str(e)}'
+    
+    return action_dict
+
+
+def _enrich_activity_with_blockchain_data(activity_dict: Dict[str, Any], contract_client: ActivityActionTrackerClient) -> Dict[str, Any]:
+    """
+    Enrich activity data with blockchain information.
+    
+    Args:
+        activity_dict: Activity data dictionary
+        contract_client: Contract client instance
+        
+    Returns:
+        Enriched activity dictionary
+    """
+    try:
+        activity_id_int = uuid_to_int(activity_dict.get('activityId', ''))
+        blockchain_activity = contract_client.get_activity(activity_id_int)
+        
+        activity_dict['blockchain'] = {
+            'name': contract_client._bytes32_to_string(blockchain_activity.name),
+            'description': contract_client._bytes32_to_string(blockchain_activity.description),
+            'points': blockchain_activity.points,
+            'isActive': blockchain_activity.is_active,
+            'leadId': str(int_to_uuid(blockchain_activity.lead_id))
+        }
+    except Exception as e:
+        activity_dict['blockchain_warning'] = f'Blockchain data unavailable: {str(e)}'
+    
+    return activity_dict
 
 
 def _get_auth_context(request: Request) -> AuthenticationContext:
@@ -379,6 +432,17 @@ def get_active_activities(request: Request) -> Response:
         # Serialize response
         activities_data = [activity.to_dict() for activity in activities]
         
+        # Enrich with blockchain data
+        try:
+            contract_client = _get_contract_client()
+            activities_data = [
+                _enrich_activity_with_blockchain_data(activity_dict, contract_client)
+                for activity_dict in activities_data
+            ]
+        except Exception as blockchain_error:
+            # Continue without blockchain enrichment
+            pass
+        
         return Response({
             'activities': activities_data
         }, status=status.HTTP_200_OK)
@@ -420,10 +484,30 @@ def get_activity_details(request: Request, activity_id: str) -> Response:
         activity_service = _get_activity_service()
         activity_details = activity_service.get_activity_details(activity_id_obj, auth_context)
         
-        return Response(
-            activity_details.to_dict(),
-            status=status.HTTP_200_OK
-        )
+        # Enrich with blockchain data
+        try:
+            contract_client = _get_contract_client()
+            activity_id_int = _uuid_to_int(activity_id_obj)
+            
+            blockchain_activity = contract_client.get_activity(activity_id_int)
+            
+            # Add blockchain data to response
+            activity_dict = activity_details.to_dict()
+            activity_dict['blockchain'] = {
+                'name': contract_client._bytes32_to_string(blockchain_activity.name),
+                'description': contract_client._bytes32_to_string(blockchain_activity.description),
+                'points': blockchain_activity.points,
+                'isActive': blockchain_activity.is_active,
+                'leadId': str(int_to_uuid(blockchain_activity.lead_id))
+            }
+            
+            return Response(activity_dict, status=status.HTTP_200_OK)
+            
+        except Exception as blockchain_error:
+            # Return DB data if blockchain query fails
+            activity_dict = activity_details.to_dict()
+            activity_dict['warning'] = f'Blockchain data unavailable: {str(blockchain_error)}'
+            return Response(activity_dict, status=status.HTTP_200_OK)
         
     except AuthorizationException as e:
         return Response({
@@ -633,6 +717,17 @@ def get_pending_validations(request: Request) -> Response:
         # Serialize response
         actions_data = [action.to_dict() for action in actions]
         
+        # Enrich with blockchain data
+        try:
+            contract_client = _get_contract_client()
+            actions_data = [
+                _enrich_action_with_blockchain_data(action_dict, contract_client)
+                for action_dict in actions_data
+            ]
+        except Exception as blockchain_error:
+            # Continue without blockchain enrichment
+            pass
+        
         return Response({
             'actions': actions_data
         }, status=status.HTTP_200_OK)
@@ -669,6 +764,17 @@ def get_my_actions(request: Request) -> Response:
         
         # Serialize response
         actions_data = [action.to_dict() for action in actions]
+        
+        # Enrich with blockchain data
+        try:
+            contract_client = _get_contract_client()
+            actions_data = [
+                _enrich_action_with_blockchain_data(action_dict, contract_client)
+                for action_dict in actions_data
+            ]
+        except Exception as blockchain_error:
+            # Continue without blockchain enrichment
+            pass
         
         return Response({
             'actions': actions_data
