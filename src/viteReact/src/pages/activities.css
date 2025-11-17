@@ -1,0 +1,124 @@
+.activities-page {
+  padding: 100px 20px 40px;
+  position: relative;
+  min-height: 100dvh;
+}
+
+.activities-page .glow {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, var(--cta) 0%, rgba(63,210,255,0) 60%);
+  filter: blur(120px);
+  top: 20%;
+  right: -200px;
+  animation: glowMove 5s infinite alternate;
+}
+
+@keyframes glowMove {
+  0% { transform: translate(-10px, 0) scale(1); }
+  100% { transform: translate(10px, 20px) scale(1.1); }
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filters input,
+.filters select {
+  padding: 10px 14px;
+  background: var(--bgl);
+  color: var(--fg);
+  border-radius: 8px;
+  border: none;
+}
+
+.activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.activity-card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 14px;
+  border-left: 4px solid var(--cta);
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-head .status {
+  padding: 5px 10px;
+  border-radius: 6px;
+  text-transform: capitalize;
+  font-size: .85rem;
+}
+
+.status.active {
+  background: #1f7a18;
+}
+
+.status.inactive {
+  background: #7a1a18;
+}
+
+.description {
+  opacity: .85;
+  margin: 10px 0 14px;
+}
+
+.meta {
+  font-size: .9rem;
+  opacity: .9;
+  margin-bottom: 10px;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  opacity: .9;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.actions button {
+  background: var(--cta);
+  padding: 10px 20px;
+  border-radius: 8px;
+  color: var(--fg);
+  border: none;
+  cursor: pointer;
+  transition: .3s;
+}
+
+.actions button:hover {
+  background: var(--cta-h);
+  transform: translateY(-3px);
+}
+
+.actions .outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--cta);
+  color: var(--cta);
+}
+
+.actions .danger {
+  color: #e34a4a;
+  box-shadow: inset 0 0 0 2px #e34a4a;
+}

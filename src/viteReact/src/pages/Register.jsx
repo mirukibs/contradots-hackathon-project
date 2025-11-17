@@ -4,12 +4,12 @@ import { registerUser } from "../api/auth";
 import "./register.css";
 
 export default function Register() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "MEMBER",
-  });
+const [form, setForm] = useState({
+  name: "",
+  email: "",
+  password: "",
+});
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 

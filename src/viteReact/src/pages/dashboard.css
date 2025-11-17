@@ -1,0 +1,137 @@
+.dashboard {
+  padding: 0 32px;
+  overflow: hidden;
+  position: relative;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  background-color: var(--bg);
+  overflow: hidden;
+}
+
+.dashboard .glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--cta) 0%, rgba(63,210,255,0) 60%);
+  filter: blur(120px);
+  bottom: -200px;
+  right: -200px;
+  animation: glowMove 5s infinite alternate;
+}
+
+@keyframes glowMove {
+  0% { transform: translate(-10px, 0) scale(1); }
+  100% { transform: translate(10px, 20px) scale(1.1); }
+}
+
+.hero-card {
+  background: var(--card);
+  padding: 30px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.hero-card h1 {
+  font-size: 2.6rem;
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+.score-box {
+  background: var(--bgl);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.score-box h3 {
+  color: var(--fg);
+  opacity: .8;
+}
+
+.score-box .score {
+  font-size: 3.4rem;
+  margin-top: 10px;
+  font-weight: bold;
+  color: var(--cta);
+}
+
+.quick-actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.quick-actions button {
+  background: var(--cta);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  transition: .3s;
+}
+
+.quick-actions button:hover {
+  background: var(--cta-h);
+  transform: translateY(-4px);
+}
+
+.quick-actions .outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--cta);
+  color: var(--cta);
+}
+
+.recent-actions {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.recent-actions h2 {
+  margin-bottom: 16px;
+}
+
+.action-item {
+  padding: 16px;
+  background: var(--card);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--cta);
+}
+
+.action-item span {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: .85rem;
+  text-transform: capitalize;
+}
+
+.action-item .approved {
+  background: #1f7a18;
+}
+
+.action-item .pending {
+  background: #705300;
+}
+
+.action-item .rejected {
+  background: #7a1a18;
+}
+
+.empty {
+  opacity: .6;
+  font-style: italic;
+}

@@ -1,45 +1,37 @@
-const API_URL = "http://localhost:8000/api"; // adjust to your backend
+import axios from "axios";
+
+const API_BASE = "http://localhost:8000/api/v1/auth";
 
 export async function registerUser(data) {
   try {
-    const res = await fetch(`${API_URL}/register/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      return { error: json };
-    }
-    // assume json contains token and maybe user
-    return { data: json };
+    const payload = {
+      name: data.name,
+      email: data.email,
+      password: data.password
+    };
+
+    const res = await axios.post(`${API_BASE}/register/`, payload);
+    return res.data;
   } catch (err) {
-    return { error: { detail: "Network error" } };
+    if (err.response) return err.response.data;
+    return { error: "NETWORK_ERROR", message: err.message };
   }
 }
 
 export async function loginUser(data) {
   try {
-    const res = await fetch(`${API_URL}/login/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      return { error: json };
-    }
-    return { data: json };
+    const res = await axios.post(`${API_BASE}/login/`, data);
+    return res.data;
   } catch (err) {
-    return { error: { detail: "Network error" } };
+    if (err.response) return err.response.data;
+    return { error: "NETWORK_ERROR", message: err.message };
   }
 }
 
-// Helper to get the auth header for future API calls
-export function getAuthHeader() {
-  const token = localStorage.getItem("token");
-  if (!token) return {};
-  return {
-    Authorization: `Bearer ${token}`, // or whatever your backend expects
-  };
+export function setAuthToken(token) {
+  localStorage.setItem("token", token);
+}
+
+export function getAuthToken() {
+  return localStorage.getItem("token");
 }
