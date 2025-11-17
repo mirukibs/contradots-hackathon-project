@@ -31,7 +31,6 @@ export default function Dashboard() {
       </header>
 
       <main className="dashboard">
-        <span className="glow"></span>
 
         <section className="hero-card">
 

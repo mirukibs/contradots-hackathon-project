@@ -36,9 +36,10 @@
 
 body {
   background-color: var(--bg);
+  flex-direction: column;
+  overflow-x: hidden;
   width: 100dvw;
   display: flex;
-  flex-direction: column;
 }
 
 /* Typography */

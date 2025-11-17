@@ -1,6 +1,6 @@
 .dashboard {
   padding: 0 32px;
-  overflow: hidden;
+  overflow-y: hidden;
   position: relative;
   min-height: 100dvh;
   width: 100%;
