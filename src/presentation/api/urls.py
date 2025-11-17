@@ -13,9 +13,10 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/', include('src.presentation.api.authentication.urls')),
     
+    # Activity and Action endpoints
+    path('activity_action/', include('src.presentation.api.activity_action.urls')),
+    
     # Future API modules will be added here
-    # path('activities/', include('src.presentation.api.activities.urls')),
-    # path('actions/', include('src.presentation.api.actions.urls')),
     # path('leaderboard/', include('src.presentation.api.leaderboard.urls')),
     
     # Health check
