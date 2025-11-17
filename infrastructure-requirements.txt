@@ -46,3 +46,6 @@ pytest-cov>=4.0.0
 factory-boy>=3.2.1
 mypy>=1.0.0
 django-stubs>=4.2.0
+
+# web3 for blockchain interactions
+web3>=7.14.0
