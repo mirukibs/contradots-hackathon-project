@@ -37,6 +37,13 @@ class UserRegistrationSerializer(serializers.Serializer):
         help_text="Password confirmation"
     )
     
+    role = serializers.ChoiceField(
+        choices=['participant', 'lead'],
+        default='lead',
+        required=False,
+        help_text="User role (participant or lead, defaults to lead)"
+    )
+    
     def validate_name(self, value: str) -> str:
         """Validate name format and constraints."""
         # Name should not be empty or just whitespace

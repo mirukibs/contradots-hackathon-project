@@ -58,21 +58,47 @@ from ....infrastructure.activity_action_contract.uuid_int_converter import (
 import uuid as uuid_lib
 import os
 import json
+import asyncio
 
 
 # ==================== Mock Implementations ====================
 # These are temporary mock implementations until proper infrastructure is created
 
-class MockActivityQueryRepository(ActivityQueryRepository):
-    """Mock implementation of ActivityQueryRepository for API layer."""
+class DjangoActivityQueryRepository(ActivityQueryRepository):
+    """Django ORM implementation of ActivityQueryRepository for API layer."""
+    
+    def __init__(self, activity_repo: DjangoActivityRepository):
+        self._activity_repo = activity_repo
     
     def get_active_activities(self) -> List[ActivityDto]:
-        # TODO: Implement proper query logic
-        return []
+        """Get all active activities from the database."""
+        activities = self._activity_repo.find_all_active()
+        return [
+            ActivityDto(
+                activityId=str(activity.activity_id.value),
+                name=activity.name,
+                description=activity.description,
+                leadId=str(activity.lead_id.value),
+                points=activity.points,
+                isActive=activity.is_active
+            )
+            for activity in activities
+        ]
     
     def get_activity_details(self, activity_id: ActivityId) -> ActivityDetailsDto:
-        # TODO: Implement proper query logic
-        raise ValueError(f"Activity not found: {activity_id}")
+        """Get detailed information about a specific activity."""
+        activity = self._activity_repo.find_by_id(activity_id)
+        if not activity:
+            raise ValueError(f"Activity not found: {activity_id}")
+        
+        return ActivityDetailsDto(
+            activityId=str(activity.activity_id.value),
+            name=activity.name,
+            description=activity.description,
+            leadId=str(activity.lead_id.value),
+            points=activity.points,
+            isActive=activity.is_active
+        )
 
 
 class MockActionQueryRepository(ActionQueryRepository):
@@ -140,12 +166,16 @@ def _get_contract_client() -> ActivityActionTrackerClient:
         ActivityActionTrackerClient instance
     """
     # Get configuration from environment variables
-    web3_provider = os.getenv('WEB3_PROVIDER', 'http://localhost:8545')
-    contract_address = os.getenv('CONTRACT_ADDRESS', '')
-    private_key = os.getenv('PRIVATE_KEY', '')
+    web3_provider = os.getenv('WEB3_PROVIDER', 'https://testnet-passet-hub-eth-rpc.polkadot.io')
+    contract_address = os.getenv('CONTRACT_ADDRESS', '0x7e50f3D523176C696AEe69A1245b12EBAE0a17dd')
+    private_key = os.getenv('PRIVATE_KEY', '004df3d1cdd120476b39cf7f726b29179f9e1ae5aaf756ce82e2f62bdda82983')
     
     # Load ABI from file or environment
-    abi_path = os.getenv('CONTRACT_ABI_PATH', 'contract_abi.json')
+    # views.py is at: src/presentation/api/activity_action/views.py
+    # abi.json is at: abi.json (project root)
+    # Need to go up 5 levels: activity_action -> api -> presentation -> src -> project_root
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    abi_path = os.path.join(base_dir, 'abi.json')
     try:
         with open(abi_path, 'r') as f:
             contract_abi = json.load(f)
@@ -269,12 +299,15 @@ def _get_auth_context(request: Request) -> AuthenticationContext:
     except Exception:
         raise AuthorizationException("Invalid user authentication state")
     
-    # Determine roles from user permissions or groups
-    roles = []
-    if request.user.is_staff or request.user.groups.filter(name='lead').exists():
-        roles.append(Role.LEAD)
-    else:
-        roles.append(Role.MEMBER)
+    # Get the person's role from the database
+    person_repo = DjangoPersonRepository()
+    try:
+        person = person_repo.find_by_id(person_id)
+        roles = [person.role]
+    except Exception:
+        # If person not found in repository, default to MEMBER
+        # This shouldn't happen in production but provides a fallback
+        roles = [Role.MEMBER]
     
     # Get email from user
     email = request.user.email if hasattr(request.user, 'email') else ""
@@ -289,7 +322,7 @@ def _get_auth_context(request: Request) -> AuthenticationContext:
 def _get_activity_service() -> ActivityApplicationService:
     """Create and return an instance of ActivityApplicationService."""
     activity_repo = DjangoActivityRepository()
-    activity_query_repo = MockActivityQueryRepository()
+    activity_query_repo = DjangoActivityQueryRepository(activity_repo)
     person_repo = DjangoPersonRepository()
     authorization_service = AuthorizationService(person_repo)
     
@@ -323,7 +356,7 @@ def _get_action_service() -> ActionApplicationService:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-async def create_activity(request: Request) -> Response:
+def create_activity(request: Request) -> Response:
     """
     Create a new activity (Lead only).
     
@@ -373,12 +406,12 @@ async def create_activity(request: Request) -> Response:
             activity_id_int = _uuid_to_int(ActivityId(str(activity_id)))
             
             # Create activity on blockchain
-            blockchain_activity_id, tx_receipt = await contract_client.create_activity(
+            blockchain_activity_id, tx_receipt = asyncio.run(contract_client.create_activity(
                 name=validated_data['name'],
                 description=validated_data['description'],
                 lead_id=lead_id_int,
                 points=validated_data['points']
-            )
+            ))
             
             return Response({
                 'message': 'Activity created successfully',
@@ -528,7 +561,7 @@ def get_activity_details(request: Request, activity_id: str) -> Response:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-async def deactivate_activity(request: Request) -> Response:
+def deactivate_activity(request: Request) -> Response:
     """
     Deactivate an activity (Lead only).
     
@@ -574,7 +607,7 @@ async def deactivate_activity(request: Request) -> Response:
             contract_client = _get_contract_client()
             activity_id_int = _uuid_to_int(activity_id)
             
-            tx_receipt = await contract_client.deactivate_activity(activity_id_int)
+            tx_receipt = asyncio.run(contract_client.deactivate_activity(activity_id_int))
             
             return Response({
                 'message': 'Activity deactivated successfully',
@@ -608,7 +641,7 @@ async def deactivate_activity(request: Request) -> Response:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-async def submit_action(request: Request) -> Response:
+def submit_action(request: Request) -> Response:
     """
     Submit a new action for an activity.
     
@@ -657,12 +690,12 @@ async def submit_action(request: Request) -> Response:
             person_id_int = _uuid_to_int(auth_context.current_user_id)
             activity_id_int = _uuid_to_int(ActivityId(validated_data['activityId']))
             
-            blockchain_action_id, tx_receipt = await contract_client.submit_action(
+            blockchain_action_id, tx_receipt = asyncio.run(contract_client.submit_action(
                 person_id=person_id_int,
                 activity_id=activity_id_int,
                 description=validated_data['description'],
                 proof_hash=validated_data['proofHash']
-            )
+            ))
             
             return Response({
                 'message': 'Action submitted successfully',
@@ -794,7 +827,7 @@ def get_my_actions(request: Request) -> Response:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-async def validate_proof(request: Request) -> Response:
+def validate_proof(request: Request) -> Response:
     """
     Validate or reject an action's proof (Lead only).
     
@@ -841,10 +874,10 @@ async def validate_proof(request: Request) -> Response:
             contract_client = _get_contract_client()
             action_id_int = _uuid_to_int(ActionId(validated_data['actionId']))
             
-            tx_receipt = await contract_client.validate_proof(
+            tx_receipt = asyncio.run(contract_client.validate_proof(
                 action_id=action_id_int,
                 is_valid=validated_data['isValid']
-            )
+            ))
             
             result_message = 'Proof validated successfully' if validated_data['isValid'] else 'Proof rejected'
             
