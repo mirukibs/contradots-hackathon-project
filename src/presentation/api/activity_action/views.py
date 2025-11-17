@@ -68,37 +68,51 @@ class DjangoActivityQueryRepository(ActivityQueryRepository):
     """Django ORM implementation of ActivityQueryRepository for API layer."""
     
     def __init__(self, activity_repo: DjangoActivityRepository):
+        from src.infrastructure.django_app.models import Activity as ActivityModel
         self._activity_repo = activity_repo
+        self._activity_model = ActivityModel
     
     def get_active_activities(self) -> List[ActivityDto]:
         """Get all active activities from the database."""
-        activities = self._activity_repo.find_all_active()
+        # Query ActivityModel directly to get all fields (name, points, is_active, lead_person)
+        activity_models = self._activity_model.objects.filter(is_active=True).select_related('lead_person__user')
+        
         return [
             ActivityDto(
-                activityId=str(activity.activity_id.value),
-                name=activity.name,
-                description=activity.description,
-                leadId=str(activity.lead_id.value),
-                points=activity.points,
-                isActive=activity.is_active
+                activityId=str(model.activity_id),
+                name=model.name,
+                description=model.description,
+                points=model.points,
+                leadName=model.lead_person.full_name,
+                isActive=model.is_active
             )
-            for activity in activities
+            for model in activity_models
         ]
     
     def get_activity_details(self, activity_id: ActivityId) -> ActivityDetailsDto:
         """Get detailed information about a specific activity."""
-        activity = self._activity_repo.find_by_id(activity_id)
-        if not activity:
-            raise ValueError(f"Activity not found: {activity_id}")
+        from src.infrastructure.django_app.models import Action as ActionModel
         
-        return ActivityDetailsDto(
-            activityId=str(activity.activity_id.value),
-            name=activity.name,
-            description=activity.description,
-            leadId=str(activity.lead_id.value),
-            points=activity.points,
-            isActive=activity.is_active
-        )
+        try:
+            # Query ActivityModel directly
+            model = self._activity_model.objects.select_related('lead_person__user').get(activity_id=activity_id.value)
+            
+            # Count participants and total actions submitted
+            participant_count = ActionModel.objects.filter(activity_id=activity_id.value).values('actor_id').distinct().count()
+            total_actions_submitted = ActionModel.objects.filter(activity_id=activity_id.value).count()
+            
+            return ActivityDetailsDto(
+                activityId=str(model.activity_id),
+                name=model.name,
+                description=model.description,
+                points=model.points,
+                leadName=model.lead_person.full_name,
+                isActive=model.is_active,
+                participantCount=participant_count,
+                totalActionsSubmitted=total_actions_submitted
+            )
+        except self._activity_model.DoesNotExist:
+            raise ValueError(f"Activity not found: {activity_id}")
 
 
 class MockActionQueryRepository(ActionQueryRepository):
@@ -387,23 +401,10 @@ def create_activity(request: Request) -> Response:
         # Extract validated data
         validated_data = cast(Dict[str, Any], serializer.validated_data)
         
-        # Create command
-        command = CreateActivityCommand(
-            name=validated_data['name'],
-            description=validated_data['description'],
-            points=validated_data['points'],
-            leadId=auth_context.current_user_id
-        )
-        
-        # Execute through application service
-        activity_service = _get_activity_service()
-        activity_id = activity_service.create_activity(command, auth_context)
-        
-        # Store activity on blockchain
+        # First, create activity on blockchain to get the blockchain_activity_id
         try:
             contract_client = _get_contract_client()
             lead_id_int = _uuid_to_int(auth_context.current_user_id)
-            activity_id_int = _uuid_to_int(ActivityId(str(activity_id)))
             
             # Create activity on blockchain
             blockchain_activity_id, tx_receipt = asyncio.run(contract_client.create_activity(
@@ -413,19 +414,36 @@ def create_activity(request: Request) -> Response:
                 points=validated_data['points']
             ))
             
+            # Convert blockchain_activity_id (int) to UUID for use as database activity_id
+            activity_uuid = int_to_uuid(blockchain_activity_id)
+            activity_id_obj = ActivityId(activity_uuid)
+            
+            # Create command with the blockchain-generated activity ID
+            command = CreateActivityCommand(
+                name=validated_data['name'],
+                description=validated_data['description'],
+                points=validated_data['points'],
+                leadId=auth_context.current_user_id,
+                activityId=activity_id_obj
+            )
+            
+            # Execute through application service (will use the provided activity_id)
+            activity_service = _get_activity_service()
+            activity_id = activity_service.create_activity(command, auth_context)
+            
             return Response({
                 'message': 'Activity created successfully',
-                'activityId': str(activity_id),
+                'activityId': str(activity_id.value),
                 'blockchainActivityId': blockchain_activity_id,
                 'transactionHash': tx_receipt.get('transactionHash', '').hex() if tx_receipt.get('transactionHash') else None
             }, status=status.HTTP_201_CREATED)
-        except Exception as blockchain_error:
-            # Activity created in DB but blockchain failed - log and return with warning
+            
+        except Exception as e:
+            # If blockchain creation fails, we don't create in DB
             return Response({
-                'message': 'Activity created successfully (blockchain storage pending)',
-                'activityId': str(activity_id),
-                'warning': f'Blockchain storage failed: {str(blockchain_error)}'
-            }, status=status.HTTP_201_CREATED)
+                'error': 'BLOCKCHAIN_ERROR',
+                'message': f'Failed to create activity on blockchain: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     except AuthorizationException as e:
         return Response({

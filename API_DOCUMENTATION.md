@@ -130,19 +130,17 @@ Create a new activity (Lead only).
 }
 ```
 
-**Response with Blockchain Warning** (201 Created):
-```json
-{
-  "message": "Activity created successfully (blockchain storage pending)",
-  "activityId": "660e8400-e29b-41d4-a716-446655440001",
-  "warning": "Blockchain storage failed: Connection timeout"
-}
-```
+**Important Notes**:
+- The activity is **first created on the blockchain**
+- The `blockchainActivityId` (integer) is converted to UUID format and used as the `activityId` in the database
+- This ensures the database activity ID corresponds to the blockchain activity ID
+- If blockchain creation fails, the activity is **not created** in the database
 
 **Error Responses**:
 - `400`: Invalid activity data
 - `401`: Authentication required
 - `403`: Insufficient permissions (not a lead)
+- `500`: Blockchain error - activity creation failed
 
 ---
 
