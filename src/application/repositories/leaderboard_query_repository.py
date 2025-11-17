@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from typing import List
-from src.domain.person.person import PersonId
 from src.application.dtos.leaderboard_dto import LeaderboardDto
 
 
@@ -12,6 +11,7 @@ class LeaderboardQueryRepository(ABC):
     
     This interface defines read-only operations for leaderboard data,
     following the CQRS pattern for optimized read performance.
+    Infrastructure layer implements this with primitive types only.
     """
     
     @abstractmethod
@@ -25,12 +25,12 @@ class LeaderboardQueryRepository(ABC):
         pass
     
     @abstractmethod
-    def get_person_rank(self, person_id: PersonId) -> int:
+    def get_person_rank(self, person_id: str) -> int:
         """
         Get the current rank of a specific person in the leaderboard.
         
         Args:
-            person_id: The ID of the person to get rank for
+            person_id: The ID of the person to get rank for (as string)
             
         Returns:
             The person's current rank (1-based, 1 = highest score)

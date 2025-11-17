@@ -122,9 +122,12 @@ class ActivityApplicationService:
         # Require authentication to view activity details
         self._authorization_service.validate_role_permission(context, "view_activities")
         
+        # Convert ActivityId to string for query repository
+        activity_id_str = str(activity_id)
+        
         # Delegate to query repository for optimized read
         # The repository will raise ValueError if activity not found
-        return self._activity_query_repo.get_activity_details(activity_id)
+        return self._activity_query_repo.get_activity_details(activity_id_str)
     
     def deactivate_activity(self, command: DeactivateActivityCommand, context: AuthenticationContext) -> None:
         """

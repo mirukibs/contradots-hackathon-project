@@ -12,7 +12,7 @@ class RegisterPersonCommand:
     Attributes:
         name: Full name of the person
         email: Email address (must be valid format)
-        role: Role in the system ('participant' or 'lead')
+        role: Role in the system ('member' or 'lead')
     """
     name: str
     email: str
@@ -40,6 +40,6 @@ class RegisterPersonCommand:
             raise ValueError("Role is required and cannot be empty")
         
         # Role validation - must be valid role
-        valid_roles = ['participant', 'lead']
+        valid_roles = ['member', 'lead']
         if self.role.lower() not in valid_roles:
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")

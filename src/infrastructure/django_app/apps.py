@@ -22,3 +22,11 @@ class DjangoAppConfig(AppConfig):
             from . import signals  # type: ignore
         except ImportError:
             pass  # Signals module doesn't exist yet
+        
+        # Initialize the event system
+        try:
+            from ..events.event_publisher import initialize_event_system
+            initialize_event_system()
+        except ImportError as e:
+            print(f"Warning: Could not initialize event system: {e}")
+            pass  # Event system not yet complete

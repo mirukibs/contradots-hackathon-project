@@ -1,14 +1,13 @@
 .dashboard {
-  padding: 0 32px;
-  overflow-y: hidden;
+  padding: 80px 32px 32px;  /* Add top padding for fixed header */
+  overflow-y: auto;
   position: relative;
-  min-height: 100dvh;
+  min-height: 100vh;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 40px;
   background-color: var(--bg);
-  overflow: hidden;
 }
 
 .dashboard .glow {
@@ -32,8 +31,10 @@
   padding: 30px;
   border-radius: 16px;
   width: 100%;
-  max-width: 700px;
+  max-width: 800px;
   margin: 0 auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-card h1 {
@@ -94,44 +95,126 @@
 
 .recent-actions {
   width: 100%;
-  max-width: 700px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
 .recent-actions h2 {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  color: var(--fg);
+  text-align: center;
 }
 
 .action-item {
-  padding: 16px;
+  padding: 20px;
   background: var(--card);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  border-left: 3px solid var(--cta);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border-left: 4px solid var(--cta);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.action-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.action-item b {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+
+.action-item p {
+  color: var(--muted);
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.action-item .timestamp {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .action-item span {
   display: inline-block;
-  margin-top: 8px;
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: .85rem;
+  margin-top: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   text-transform: capitalize;
+  font-weight: 600;
 }
 
 .action-item .approved {
   background: #1f7a18;
+  color: white;
 }
 
 .action-item .pending {
   background: #705300;
+  color: white;
 }
 
 .action-item .rejected {
   background: #7a1a18;
+  color: white;
 }
 
 .empty {
   opacity: .6;
   font-style: italic;
+}
+
+.error-banner {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 20px;
+  padding: 16px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  text-align: center;
+}
+
+.error-banner p {
+  margin: 0;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 80px 16px 32px;
+    gap: 24px;
+  }
+  
+  .hero-card {
+    padding: 20px;
+  }
+  
+  .action-item {
+    padding: 16px;
+  }
+  
+  .action-item .timestamp {
+    position: static;
+    margin-top: 8px;
+    display: block;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .quick-actions button {
+    width: 100%;
+  }
 }

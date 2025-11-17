@@ -1,21 +1,50 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { authAPI, actionAPI, leaderboardAPI } from "../api/client";
+import ProfileDropdown from "../components/ProfileDropdown";
 import "./dashboard.css";
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [score, setScore] = useState(0);
+  const [profile, setProfile] = useState(null);
   const [recentActions, setRecentActions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
-  // Load user data (placeholder until backend endpoints for user context)
+  // Load user data and recent actions from backend
   useEffect(() => {
-    const storedUser = localStorage.getItem("user_email");
-    const storedScore = localStorage.getItem("user_score");
-    const storedActions = JSON.parse(localStorage.getItem("recent_actions") || "[]");
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    setUser(storedUser || "Unknown User");
-    setScore(storedScore || 0);
-    setRecentActions(storedActions);
+        // Load user profile
+        const profileResult = await leaderboardAPI.getMyProfile();
+        if (profileResult.error) {
+          setError(profileResult.message);
+        } else {
+          setProfile(profileResult.data);
+        }
+
+        // Load recent actions
+        const actionsResult = await actionAPI.getMyActions();
+        if (!actionsResult.error && actionsResult.data) {
+          // Get the 5 most recent actions
+          const recent = actionsResult.data
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5);
+          setRecentActions(recent);
+        }
+
+      } catch (err) {
+        setError('Failed to load dashboard data');
+        console.error('Dashboard load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
   }, []);
 
   return (
@@ -24,30 +53,35 @@ export default function Dashboard() {
         <span className="logo">
           <b>Credora</b>
         </span>
-        <span className="right">
-          <b>Welcome back</b>
-          <p>{user}</p>
-        </span>
+        <ProfileDropdown />
       </header>
 
       <main className="dashboard">
+
+        {error && (
+          <div className="error-banner">
+            <p>⚠️ {error}</p>
+          </div>
+        )}
 
         <section className="hero-card">
 
           <div className="score-box">
             <h3>Your Social Score</h3>
-            <p className="score">{score}</p>
+            <p className="score">
+              {loading ? '...' : (profile?.totalScore || 0)}
+            </p>
           </div>
 
           <div className="quick-actions">
             <Link to="/activities">
               <button>Activities</button>
             </Link>
-            <Link to="/submit-action">
+            <Link to="/activities#submit">
               <button className="outline">Submit Action</button>
             </Link>
-            <Link to="/reputation">
-              <button className="outline">Reputation</button>
+            <Link to="/leaderboard">
+              <button className="outline">Leaderboard</button>
             </Link>
           </div>
         </section>
@@ -55,15 +89,20 @@ export default function Dashboard() {
         <section className="recent-actions">
           <h2>Recent Actions</h2>
 
-          {recentActions.length === 0 && (
+          {loading && <p className="empty">Loading recent actions...</p>}
+
+          {!loading && recentActions.length === 0 && (
             <p className="empty">No recent actions yet.</p>
           )}
 
-          {recentActions.map((a, i) => (
-            <div className="action-item" key={i}>
-              <b>{a.activity}</b>
+          {!loading && recentActions.map((a, i) => (
+            <div className="action-item" key={a.actionId || i}>
+              <b>{a.activityTitle || 'Activity'}</b>
               <p>{a.description}</p>
-              <span className={a.status}>{a.status}</span>
+              <span className={`status ${a.status}`}>{a.status}</span>
+              <small className="timestamp">
+                {new Date(a.createdAt).toLocaleString()}
+              </small>
             </div>
           ))}
         </section>

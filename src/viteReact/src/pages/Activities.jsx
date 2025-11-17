@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { activityAPI, actionAPI, authAPI, apiUtils } from "../api/client";
 import "./activities.css";
 
 /**
  * Activities page with inline modals (Create / Edit / Submit / Deactivate)
  * - Single-file for hackathon speed
  * - Glassmorphism modal style
- * - Demo data and local state operations (replace with API/contract calls later)
+ * - Full backend integration with Django REST API
  */
 
 export default function Activities() {
@@ -14,6 +15,7 @@ export default function Activities() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const navigate = useNavigate();
 
   // Modal state
   const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -23,54 +25,45 @@ export default function Activities() {
 
   // UX state
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const fileInputRef = useRef();
 
-  // demo bootstrap
+  // Load activities from backend on mount
   useEffect(() => {
-    const demo = [
-      {
-        id: 3,
-        name: "Code Review Sprint",
-        description: "Review community PRs for quality assurance",
-        lead: 3,
-        points: 75,
-        status: "inactive",
-        submitted: 22,
-        validated: 16,
-        actions: [],
-      },
-      {
-        id: 2,
-        name: "Tree Planting",
-        description: "Plant trees in the community park",
-        lead: 1,
-        points: 100,
-        status: "active",
-        submitted: 12,
-        validated: 8,
-        actions: [
-          { actionId: "a2-1", personId: 2, description: "Planted 5 seedlings", proofHash: "0xabc", status: "validated", createdAt: "2025-10-01T08:30:00Z" },
-        ],
-      },
-      {
-        id: 1,
-        name: "Beach Cleanup",
-        description: "Clean local beach and collect trash",
-        lead: 1,
-        points: 50,
-        status: "active",
-        submitted: 5,
-        validated: 3,
-        actions: [
-          { actionId: "a1-1", personId: 2, description: "Collected 10 bags", proofHash: "0x123", status: "validated", createdAt: "2025-10-02T10:00:00Z" },
-          { actionId: "a1-2", personId: 4, description: "Cleared near pier", proofHash: "0x456", status: "pending", createdAt: "2025-10-03T12:25:00Z" },
-        ],
-      },
-    ];
-
-    // ensure consistent id ordering (newest first)
-    setActivities(demo.sort((a, b) => b.id - a.id));
+    loadActivities();
   }, []);
+
+  const loadActivities = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await activityAPI.getActiveActivities();
+      if (result.error) {
+        setError(result.message || 'Failed to load activities');
+      } else {
+        // Transform backend data to match expected format
+        const transformedActivities = (result.activities || []).map(activity => ({
+          id: activity.activityId,
+          name: activity.name,
+          description: activity.description,
+          lead: activity.leadName,
+          points: activity.points,
+          status: activity.isActive ? "active" : "inactive",
+          submitted: 0, // Will be loaded separately or calculated
+          validated: 0, // Will be loaded separately or calculated
+          actions: [], // Will be loaded separately if needed
+        }));
+        setActivities(transformedActivities);
+      }
+    } catch (err) {
+      setError('Network error loading activities');
+      console.error('Load activities error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Helpers
   const nextId = () => {
@@ -90,41 +83,94 @@ export default function Activities() {
       return 0;
     });
 
-  // Create activity (local)
-  const handleCreate = (payload) => {
-    const id = nextId();
-    const newAct = {
-      id,
-      name: payload.name,
-      description: payload.description,
-      lead: Number(payload.lead) || 1,
-      points: Number(payload.points) || 0,
-      status: "active",
-      submitted: 0,
-      validated: 0,
-      actions: [],
-    };
-    setActivities((prev) => [newAct, ...prev]);
-    setOpenCreateModal(false);
+  // Create activity (backend)
+  const handleCreate = async (payload) => {
+    setBusy(true);
+    setError(null);
+    
+    try {
+      const result = await activityAPI.createActivity({
+        name: payload.name,
+        description: payload.description,
+        points: Number(payload.points)
+      });
+      
+      if (result.error) {
+        setError(result.message || 'Failed to create activity');
+      } else {
+        // Refresh activities list
+        await loadActivities();
+        setOpenCreateModal(false);
+      }
+    } catch (err) {
+      setError('Network error creating activity');
+      console.error('Create activity error:', err);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  // Edit activity (local)
-  const handleEdit = (activityId, payload) => {
-    setActivities((prev) =>
-      prev.map((a) => (a.id === activityId ? { ...a, ...payload } : a))
-    );
-    setOpenEditModal(null);
+  // Edit activity (backend)
+  const handleEdit = async (activityId, payload) => {
+    setBusy(true);
+    setError(null);
+    
+    try {
+      // Transform payload to match API format
+      const updateData = {
+        activityId: activityId,
+        title: payload.name || payload.title,
+        description: payload.description,
+        points: Number(payload.points),
+        tags: payload.tags || [],
+        expiry: payload.expiry || null
+      };
+
+      const result = await activityAPI.updateActivity(updateData);
+
+      if (result.error) {
+        setError(result.message || 'Failed to update activity');
+      } else {
+        // Success - refresh data and close modal
+        await loadActivities();
+        setOpenEditModal(null);
+      }
+    } catch (err) {
+      setError('Network error updating activity');
+      console.error("Update activity error:", err);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  // Deactivate activity
-  const handleDeactivate = (activityId) => {
-    setActivities((prev) => prev.map((a) => (a.id === activityId ? { ...a, status: "inactive" } : a)));
-    setOpenDeactivateModal(null);
+  // Deactivate activity (backend)
+  const handleDeactivate = async (activityId) => {
+    setBusy(true);
+    setError(null);
+    
+    try {
+      const result = await activityAPI.deactivateActivity(activityId);
+      
+      if (result.error) {
+        setError(result.message || 'Failed to deactivate activity');
+      } else {
+        // Refresh activities list
+        await loadActivities();
+        setOpenDeactivateModal(null);
+      }
+    } catch (err) {
+      setError('Network error deactivating activity');
+      console.error('Deactivate activity error:', err);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  // Submit action (local), with optional file hashing
+  // Submit action (backend), with optional file hashing
   const handleSubmitAction = async ({ activityId, description, proofHash, file }) => {
     setBusy(true);
+    setError(null);
+    
     try {
       // Compute file hash if file provided and no manual hash
       let finalHash = proofHash || null;
@@ -132,36 +178,36 @@ export default function Activities() {
         finalHash = await computeFileHash(file);
       }
 
-      // simple personId detection (from localStorage user_id) or fallback
-      const personId = Number(localStorage.getItem("user_id") || 2);
-
-      const action = {
-        actionId: `act-${activityId}-${Date.now()}`,
-        personId,
-        description,
-        proofHash: finalHash || null,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      };
-
-      setActivities((prev) =>
-        prev.map((a) => {
-          if (a.id !== activityId) return a;
-          const updated = { ...a, actions: [action, ...(a.actions || [])], submitted: (a.submitted || 0) + 1 };
-          return updated;
-        })
-      );
-
-      // UX: show transaction placeholder (in real integration you'd call contract & backend)
-      setTimeout(() => {
-        // simulate backend process: leave as pending
+      if (!finalHash) {
+        setError("Please provide either a file or proof hash");
         setBusy(false);
+        return;
+      }
+
+      const result = await actionAPI.submitAction({
+        activityId: activityId,
+        description: description,
+        proofHash: finalHash
+      });
+
+      if (result.error) {
+        setError(result.message || 'Failed to submit action');
+      } else {
+        // Success - refresh data and close modal
+        await loadActivities();
         setOpenSubmitModal(null);
-      }, 900);
+      }
     } catch (err) {
+      setError('Network error submitting action');
       console.error("Submit action error:", err);
+    } finally {
       setBusy(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await authAPI.logout();
+    navigate('/login');
   };
 
   // Utility: compute SHA-256 hex of a File/Blob
@@ -179,7 +225,24 @@ export default function Activities() {
       <header className="header">
         <span className="logo"><b>Credora</b></span>
         <div className="header-actions">
+          <Link to="/dashboard" style={{ color: 'white', textDecoration: 'none', marginRight: '1rem' }}>
+            ← Dashboard
+          </Link>
           <button className="create-btn" onClick={() => setOpenCreateModal(true)}>+ Create</button>
+          <button 
+            onClick={handleLogout}
+            style={{
+              marginLeft: '1rem',
+              padding: '0.5rem 1rem',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: 'white',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
         </div>
       </header>
 

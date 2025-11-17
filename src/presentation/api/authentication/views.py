@@ -47,7 +47,7 @@ def register_user(request: Request) -> Response:
         name: str = validated_data['name']
         email: str = validated_data['email']
         password: str = validated_data['password']
-        role: str = validated_data.get('role', 'lead')  # Default to lead
+        role: str = validated_data.get('role', 'member')  # Default to member
         
         print(f"Registration attempt: {name}, {email}, role: {role}")
         
@@ -85,7 +85,7 @@ def register_user(request: Request) -> Response:
             
             # Map command role to domain Role enum
             role_mapping = {
-                'participant': Role.MEMBER,
+                'member': Role.MEMBER,
                 'lead': Role.LEAD
             }
             domain_role = role_mapping[register_command.role.lower()]
@@ -119,6 +119,7 @@ def register_user(request: Request) -> Response:
                 'user_id': str(person.person_id.value),
                 'name': name,
                 'email': email,
+                'role': role,  # Include the role in the response
                 'message': 'User registered successfully. Please log in to get an access token.'
             }
             
@@ -167,11 +168,11 @@ def login_user(request: Request) -> Response:
         
         print(f"Login attempt: {email}")
         
-        # Authenticate user
-        auth_service = get_authentication_service()
-        token = auth_service.authenticate_user(email, password)
+        # Use Django's built-in authentication
+        from django.contrib.auth import authenticate
+        user = authenticate(username=email, password=password)
         
-        if not token:
+        if not user or not user.is_active:
             return Response({
                 'error': 'AUTHENTICATION_FAILED',
                 'message': 'Invalid email or password'
@@ -179,21 +180,24 @@ def login_user(request: Request) -> Response:
         
         print(f"Login successful: {email}")
         
-        # Get user context for response
-        auth_bridge = get_authentication_bridge()
-        auth_context = auth_bridge.create_context_from_token(token)
+        # Create or get token using Django's Token model
+        from rest_framework.authtoken.models import Token
+        token, created = Token.objects.get_or_create(user=user)
         
-        if not auth_context:
-            return Response({
-                'error': 'CONTEXT_ERROR',
-                'message': 'Unable to create user context'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Get PersonProfile for additional user data
+        try:
+            from src.infrastructure.django_app.models import PersonProfile
+            person_profile = PersonProfile.objects.get(user=user)
+            user_id = str(person_profile.person_id)
+        except PersonProfile.DoesNotExist:
+            # Fallback to Django User ID if no PersonProfile
+            user_id = str(user.pk)
         
         # Create response
         response_data = {
-            'token': token,
-            'user_id': str(auth_context.current_user_id),
-            'email': str(auth_context.email),
+            'token': token.key,
+            'user_id': user_id,
+            'email': email,  # Use the email from the request
             'is_authenticated': True,
             'message': 'Login successful'
         }
@@ -211,32 +215,32 @@ def login_user(request: Request) -> Response:
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def logout_user(request: Request) -> Response:
-    """Logout user by validating authentication token."""
+    """Logout user by deleting authentication token."""
     print("LOGOUT_USER VIEW CALLED")
     
     try:
         # Extract token from Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if not auth_header.startswith('Bearer '):
+        if not auth_header.startswith('Token '):
             return Response({
                 'error': 'MISSING_TOKEN',
-                'message': 'Authorization header with Bearer token required'
+                'message': 'Authorization header with Token required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        token = auth_header[7:]  # Remove 'Bearer ' prefix
-        print(f"Logout token: {token[:20]}...")
+        token_key = auth_header[6:]  # Remove 'Token ' prefix
+        print(f"Logout token: {token_key[:20]}...")
         
-        # Validate token
-        auth_service = get_authentication_service()
-        token_info = auth_service.validate_token(token)
+        # Delete token from database
+        from rest_framework.authtoken.models import Token
+        try:
+            token = Token.objects.get(key=token_key)
+            token.delete()
+            print("Token deleted successfully")
+        except Token.DoesNotExist:
+            # Token doesn't exist, but that's ok for logout
+            print("Token not found in database")
         
-        if not token_info:
-            return Response({
-                'error': 'INVALID_TOKEN',
-                'message': 'Invalid or expired token'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        # Return success (token validation is sufficient for logout)
+        # Return success
         return Response({
             'message': 'Logout successful',
             'is_authenticated': False  

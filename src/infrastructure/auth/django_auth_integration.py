@@ -48,7 +48,7 @@ class DjangoAuthenticationService:
                 print(f"DJANGO AUTH: Django user with email {email} already exists")
                 return False
             
-            # Create Django User first
+            # Create Django User
             user = User.objects.create_user(
                 username=email,
                 email=email,
@@ -57,12 +57,8 @@ class DjangoAuthenticationService:
             )
             print(f"DJANGO AUTH: Created Django user {user.username}")
             
-            # Then store in authentication infrastructure
-            hashed_password = self._auth_infra.hash_password(password)
-            auth_result = self._user_store.create_user(user_id, email, hashed_password)
-            print(f"DJANGO AUTH: InMemory store result: {auth_result}")
-            
-            return auth_result
+            # No need for separate user store - Django User is our source of truth
+            return True
             
         except IntegrityError as e:
             # User already exists
@@ -83,13 +79,26 @@ class DjangoAuthenticationService:
         Returns:
             Authentication token if successful, None otherwise
         """
-        user_info = self._user_store.authenticate_user(email, password, self._auth_infra)
-        if user_info:
-            return self._auth_infra.create_authentication_token(
-                user_info['user_id'], 
-                user_info['email']
+        from django.contrib.auth import authenticate
+        
+        print(f"DJANGO AUTH: Attempting authentication for {email}")
+        
+        # Use Django's authentication directly
+        user = authenticate(username=email, password=password)
+        
+        if user and user.is_active:
+            print(f"DJANGO AUTH: Django authentication successful for {email}")
+            
+            # Create token using our infrastructure
+            token = self._auth_infra.create_authentication_token(
+                str(user.pk),  # Use Django User primary key as user_id
+                email
             )
-        return None
+            print(f"DJANGO AUTH: Created token for user {email}")
+            return token
+        else:
+            print(f"DJANGO AUTH: Django authentication failed for {email}")
+            return None
     
     def validate_token(self, token: str) -> Optional[dict[str, Any]]:
         """
@@ -158,7 +167,7 @@ class CustomTokenAuthentication(authentication.BaseAuthentication):
     authentication system.
     """
     
-    keyword = 'Token'
+    keyword = 'Bearer'  # Changed from 'Token' to 'Bearer' for standard JWT format
     
     def authenticate(self, request):
         """

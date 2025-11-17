@@ -5,6 +5,7 @@ This module provides Django REST Framework views for activity and action endpoin
 integrating with the application layer services.
 """
 
+import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -60,114 +61,23 @@ import os
 import json
 import asyncio
 
-
-# ==================== Mock Implementations ====================
-# These are temporary mock implementations until proper infrastructure is created
-
-class DjangoActivityQueryRepository(ActivityQueryRepository):
-    """Django ORM implementation of ActivityQueryRepository for API layer."""
-    
-    def __init__(self, activity_repo: DjangoActivityRepository):
-        from src.infrastructure.django_app.models import Activity as ActivityModel
-        self._activity_repo = activity_repo
-        self._activity_model = ActivityModel
-    
-    def get_active_activities(self) -> List[ActivityDto]:
-        """Get all active activities from the database."""
-        # Query ActivityModel directly to get all fields (name, points, is_active, lead_person)
-        activity_models = self._activity_model.objects.filter(is_active=True).select_related('lead_person__user')
-        
-        return [
-            ActivityDto(
-                activityId=str(model.activity_id),
-                name=model.name,
-                description=model.description,
-                points=model.points,
-                leadName=model.lead_person.full_name,
-                isActive=model.is_active
-            )
-            for model in activity_models
-        ]
-    
-    def get_activity_details(self, activity_id: ActivityId) -> ActivityDetailsDto:
-        """Get detailed information about a specific activity."""
-        from src.infrastructure.django_app.models import Action as ActionModel
-        
-        try:
-            # Query ActivityModel directly
-            model = self._activity_model.objects.select_related('lead_person__user').get(activity_id=activity_id.value)
-            
-            # Count participants and total actions submitted
-            participant_count = ActionModel.objects.filter(activity_id=activity_id.value).values('actor_id').distinct().count()
-            total_actions_submitted = ActionModel.objects.filter(activity_id=activity_id.value).count()
-            
-            return ActivityDetailsDto(
-                activityId=str(model.activity_id),
-                name=model.name,
-                description=model.description,
-                points=model.points,
-                leadName=model.lead_person.full_name,
-                isActive=model.is_active,
-                participantCount=participant_count,
-                totalActionsSubmitted=total_actions_submitted
-            )
-        except self._activity_model.DoesNotExist:
-            raise ValueError(f"Activity not found: {activity_id}")
+logger = logging.getLogger(__name__)
 
 
-class MockActionQueryRepository(ActionQueryRepository):
-    """Mock implementation of ActionQueryRepository for API layer."""
-    
-    def get_pending_validations(self) -> List[ActionDtoType]:
-        # TODO: Implement proper query logic
-        return []
-    
-    def get_person_actions(self, person_id: PersonId) -> List[ActionDtoType]:
-        # TODO: Implement proper query logic
-        return []
-    
-    def get_activity_actions(self, activity_id: ActivityId) -> List[ActionDtoType]:
-        # TODO: Implement proper query logic
-        return []
-
-
-class MockEventStore(EventStore):
-    """Mock implementation of EventStore for API layer."""
-    
-    def append(self, aggregate_id: UUID, events: List[DomainEvent]) -> None:
-        # TODO: Implement proper event storage
-        pass
-    
-    def get_events(self, aggregate_id: UUID) -> List[DomainEvent]:
-        return []
-    
-    def get_all_events(self) -> List[DomainEvent]:
-        return []
-
-
-class MockEventPublisher(EventPublisher):
-    """Mock implementation of EventPublisher for API layer."""
-    
-    def __init__(self, event_store: EventStore):
-        self._event_store = event_store
-        self._handlers: List = []
-    
-    def publish(self, event: DomainEvent) -> None:
-        # TODO: Implement proper event publishing
-        pass
-    
-    def publish_all(self, events: List[DomainEvent]) -> None:
-        for event in events:
-            self.publish(event)
-    
-    @property
-    def event_store(self) -> EventStore:
-        return self._event_store
-    
-    @property
-    def handlers(self) -> List:
-        """Get the list of registered event handlers."""
-        return self._handlers
+# Import our properly implemented infrastructure components
+from ....infrastructure.persistence.django_query_repositories import (
+    DjangoActivityQueryRepository,
+    DjangoActionQueryRepository,
+    DjangoLeaderboardQueryRepository
+)
+from ....infrastructure.events.event_publisher import (
+    DjangoSignalEventBridge,
+    InMemoryEventPublisher
+)
+from ....infrastructure.security.django_authorization_service import (
+    DjangoAuthorizationService,
+    get_authorization_service
+)
 
 
 # ==================== Helper Functions ====================
@@ -307,27 +217,31 @@ def _get_auth_context(request: Request) -> AuthenticationContext:
     if not request.user or not request.user.is_authenticated:
         raise AuthorizationException("Authentication required")
     
-    # Get person_id from user
+    # Get person_id from user (avoid domain object creation here)
     try:
-        person_id = PersonId(request.user.username)  # Assuming username stores person_id
+        person_id_str = str(request.user.username)  # Use string directly
     except Exception:
         raise AuthorizationException("Invalid user authentication state")
     
-    # Get the person's role from the database
+    # Get the person's role using the repository through string ID
+    from ....infrastructure.persistence.django_repositories import DjangoPersonRepository
     person_repo = DjangoPersonRepository()
     try:
-        person = person_repo.find_by_id(person_id)
+        # Create domain PersonId only when calling repository
+        from ....domain.shared.value_objects.person_id import PersonId
+        person_id_obj = PersonId(person_id_str)
+        person = person_repo.find_by_id(person_id_obj)
         roles = [person.role]
     except Exception:
         # If person not found in repository, default to MEMBER
-        # This shouldn't happen in production but provides a fallback
+        from ....domain.person.role import Role
         roles = [Role.MEMBER]
     
     # Get email from user
     email = request.user.email if hasattr(request.user, 'email') else ""
     
     return AuthenticationContext(
-        current_user_id=person_id,
+        current_user_id=person_id_obj,
         email=email,
         roles=roles
     )
@@ -335,10 +249,11 @@ def _get_auth_context(request: Request) -> AuthenticationContext:
 
 def _get_activity_service() -> ActivityApplicationService:
     """Create and return an instance of ActivityApplicationService."""
+    # Use our properly implemented infrastructure components
     activity_repo = DjangoActivityRepository()
-    activity_query_repo = DjangoActivityQueryRepository(activity_repo)
+    activity_query_repo = DjangoActivityQueryRepository()
     person_repo = DjangoPersonRepository()
-    authorization_service = AuthorizationService(person_repo)
+    authorization_service = get_authorization_service()
     
     return ActivityApplicationService(
         activity_repo=activity_repo,
@@ -348,14 +263,66 @@ def _get_activity_service() -> ActivityApplicationService:
     )
 
 
+# Import command handlers
+from ....application.handlers.command_handler_service import CommandHandlerService
+
+
+class SimpleEventPublisher(EventPublisher):
+    """Simple implementation of EventPublisher for API layer."""
+    
+    def __init__(self):
+        self._handlers = []
+    
+    def publish(self, event: DomainEvent) -> None:
+        """Publish a single domain event."""
+        # For now, just log the event - can be enhanced later
+        logger.info(f"Publishing event: {type(event).__name__}")
+    
+    def publish_all(self, events: List[DomainEvent]) -> None:
+        """Publish multiple domain events."""
+        for event in events:
+            self.publish(event)
+    
+    @property
+    def event_store(self):
+        """Simple event store - not implemented."""
+        return None
+    
+    @property
+    def handlers(self):
+        """Get registered handlers."""
+        return self._handlers
+
+
+def _get_command_handler_service() -> CommandHandlerService:
+    """Create and return an instance of CommandHandlerService."""
+    # Create application services
+    activity_service = _get_activity_service()
+    action_service = _get_action_service()
+    
+    # For now, create a simple authentication service (can be enhanced later)
+    from ....application.services.authentication_service import AuthenticationService
+    from ....infrastructure.persistence.django_repositories import DjangoPersonRepository
+    
+    person_repo = DjangoPersonRepository()
+    auth_service = AuthenticationService(person_repo)
+    
+    return CommandHandlerService(
+        activity_service=activity_service,
+        action_service=action_service,
+        authentication_service=auth_service
+    )
+
+
 def _get_action_service() -> ActionApplicationService:
     """Create and return an instance of ActionApplicationService."""
+    # Use our properly implemented infrastructure components
     action_repo = DjangoActionRepository()
-    action_query_repo = MockActionQueryRepository()
+    action_query_repo = DjangoActionQueryRepository()
     activity_repo = DjangoActivityRepository()
-    event_store = MockEventStore()
-    event_publisher = MockEventPublisher(event_store)
-    authorization_service = AuthorizationService(DjangoPersonRepository())
+    # Use simple event publisher implementation
+    event_publisher = SimpleEventPublisher()
+    authorization_service = get_authorization_service()
     
     return ActionApplicationService(
         action_repo=action_repo,
@@ -427,9 +394,9 @@ def create_activity(request: Request) -> Response:
                 activityId=activity_id_obj
             )
             
-            # Execute through application service (will use the provided activity_id)
-            activity_service = _get_activity_service()
-            activity_id = activity_service.create_activity(command, auth_context)
+            # Execute through command handler service
+            command_service = _get_command_handler_service()
+            activity_id = command_service.handle_create_activity(command, auth_context)
             
             return Response({
                 'message': 'Activity created successfully',
@@ -616,9 +583,9 @@ def deactivate_activity(request: Request) -> Response:
             leadId=auth_context.current_user_id
         )
         
-        # Execute through application service
-        activity_service = _get_activity_service()
-        activity_service.deactivate_activity(command, auth_context)
+        # Execute through command handler service
+        command_service = _get_command_handler_service()
+        command_service.handle_deactivate_activity(command, auth_context)
         
         # Deactivate activity on blockchain
         try:
@@ -698,9 +665,9 @@ def submit_action(request: Request) -> Response:
             proofHash=validated_data['proofHash']
         )
         
-        # Execute through application service
-        action_service = _get_action_service()
-        action_id = action_service.submit_action(command, auth_context)
+        # Execute through command handler service
+        command_service = _get_command_handler_service()
+        action_id = command_service.handle_submit_action(command, auth_context)
         
         # Submit action to blockchain
         try:
@@ -883,9 +850,9 @@ def validate_proof(request: Request) -> Response:
             isValid=validated_data['isValid']
         )
         
-        # Execute through application service
-        action_service = _get_action_service()
-        action_service.simulate_proof_validation(command, auth_context)
+        # Execute through command handler service
+        command_service = _get_command_handler_service()
+        command_service.handle_validate_proof(command, auth_context)
         
         # Validate proof on blockchain
         try:

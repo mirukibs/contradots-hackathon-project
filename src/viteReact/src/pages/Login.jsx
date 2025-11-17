@@ -25,18 +25,22 @@ export default function Login() {
     if (result.error) {
       setError(result.error);
     } else {
-      const { data } = result;
-      // assume data.token (or data.access) exists:
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      } else if (data.access) {
-        localStorage.setItem("token", data.access);
-        if (data.refresh) {
-          localStorage.setItem("refresh_token", data.refresh);
+      // result is the direct response from the API
+      console.log("Login successful:", result);
+      
+      // Store token - it should already be stored by authAPI.login()
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+        // Also store user info for easy access
+        if (result.user_id) {
+          localStorage.setItem("user_id", result.user_id);
+        }
+        if (result.email) {
+          localStorage.setItem("user_email", result.email);
         }
       }
       
-      // redirect
+      // redirect to dashboard
       navigate("/dashboard");
     }
   };

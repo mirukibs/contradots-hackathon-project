@@ -8,10 +8,12 @@ const [form, setForm] = useState({
   name: "",
   email: "",
   password: "",
+  role: "member"
 });
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const navigate = useNavigate();
 
@@ -30,14 +32,17 @@ const [form, setForm] = useState({
     if (result.error) {
       setError(result.error);
     } else {
-      // If backend returns token
+      // Registration successful - show success message and redirect
       const { data } = result;
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      // If there's a user ID or name, you can store it or do whatever
-      // Then redirect to dashboard or some protected route
-      navigate("/dashboard"); // change this to where you want
+      console.log("Registration successful:", data);
+      
+      setSuccess(true);
+      setError(null);
+      
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     }
   };
 
@@ -78,9 +83,15 @@ const [form, setForm] = useState({
           />
 
           <select name="role" value={form.role} onChange={handleChange}>
-            <option value="MEMBER">Member</option>
-            <option value="LEAD">Lead</option>
+            <option value="member">Member</option>
+            <option value="lead">Lead</option>
           </select>
+
+          {success && (
+            <div className="success">
+              <b>Success!</b> Registration complete. Redirecting to login...
+            </div>
+          )}
 
           {error && (
             <div className="error">
@@ -90,8 +101,8 @@ const [form, setForm] = useState({
           )}
 
           <div className="splash-buttons">
-            <button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Account"}
+            <button type="submit" disabled={loading || success}>
+              {loading ? "Creating..." : success ? "Success!" : "Create Account"}
             </button>
 
             <Link to="/login">

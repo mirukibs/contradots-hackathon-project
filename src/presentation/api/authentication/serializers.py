@@ -34,14 +34,15 @@ class UserRegistrationSerializer(serializers.Serializer):
         max_length=128,
         min_length=8,
         write_only=True,
-        help_text="Password confirmation"
+        required=False,  # Make optional for frontend compatibility
+        help_text="Password confirmation (optional)"
     )
     
     role = serializers.ChoiceField(
-        choices=['participant', 'lead'],
-        default='lead',
+        choices=['member', 'lead'],
+        default='member',
         required=False,
-        help_text="User role (participant or lead, defaults to lead)"
+        help_text="User role (member or lead, defaults to member)"
     )
     
     def validate_name(self, value: str) -> str:
@@ -62,13 +63,15 @@ class UserRegistrationSerializer(serializers.Serializer):
     
     def validate_password(self, value: str) -> str:
         """Validate password strength."""
+        # Simplified validation for hackathon - just check minimum requirements
+        
         # Check for at least one uppercase letter
         if not re.search(r'[A-Z]', value):
             raise serializers.ValidationError(
                 "Password must contain at least one uppercase letter"
             )
         
-        # Check for at least one lowercase letter
+        # Check for at least one lowercase letter  
         if not re.search(r'[a-z]', value):
             raise serializers.ValidationError(
                 "Password must contain at least one lowercase letter"
@@ -80,17 +83,11 @@ class UserRegistrationSerializer(serializers.Serializer):
                 "Password must contain at least one digit"
             )
         
-        # Check for at least one special character
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
-            raise serializers.ValidationError(
-                "Password must contain at least one special character"
-            )
-        
         return value
     
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate that passwords match."""
-        if data['password'] != data['confirm_password']:
+        """Validate that passwords match if confirm_password is provided."""
+        if 'confirm_password' in data and data['password'] != data['confirm_password']:
             raise serializers.ValidationError({
                 'confirm_password': 'Passwords do not match'
             })

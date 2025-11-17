@@ -16,8 +16,8 @@ urlpatterns = [
     # Activity and Action endpoints
     path('activity_action/', include('src.presentation.api.activity_action.urls')),
     
-    # Future API modules will be added here
-    # path('leaderboard/', include('src.presentation.api.leaderboard.urls')),
+    # Leaderboard endpoints
+    path('leaderboard/', include('src.presentation.api.leaderboard.urls')),
     
     # Health check
     path('health/', lambda request: __import__('django.http').HttpResponse('API OK')),

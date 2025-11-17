@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from typing import List
-from src.domain.activity.activity import ActivityId
 from src.application.dtos.activity_dto import ActivityDto
 from src.application.dtos.activity_details_dto import ActivityDetailsDto
 
@@ -13,6 +12,7 @@ class ActivityQueryRepository(ABC):
     
     This interface defines read-only operations for activity data,
     following the CQRS pattern for optimized read performance.
+    Infrastructure layer implements this with primitive types only.
     """
     
     @abstractmethod
@@ -26,12 +26,12 @@ class ActivityQueryRepository(ABC):
         pass
     
     @abstractmethod
-    def get_activity_details(self, activity_id: ActivityId) -> ActivityDetailsDto:
+    def get_activity_details(self, activity_id: str) -> ActivityDetailsDto:
         """
         Get detailed information for a specific activity including statistics.
         
         Args:
-            activity_id: The ID of the activity to get details for
+            activity_id: The ID of the activity to get details for (as string)
             
         Returns:
             ActivityDetailsDto with comprehensive activity information

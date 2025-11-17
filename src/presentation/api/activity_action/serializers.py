@@ -203,3 +203,50 @@ class ValidateProofSerializer(serializers.Serializer):
         if value:
             return value.strip()
         return ""
+
+
+# ==================== Leaderboard & Profile Serializers ====================
+
+class LeaderboardEntrySerializer(serializers.Serializer):
+    """Serializer for leaderboard entry data."""
+    
+    personId = serializers.CharField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    reputationScore = serializers.IntegerField(read_only=True)
+    rank = serializers.IntegerField(read_only=True)
+
+
+class PersonProfileSerializer(serializers.Serializer):
+    """Serializer for person profile data."""
+    
+    personId = serializers.CharField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    email = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)
+    reputationScore = serializers.IntegerField(read_only=True)
+
+
+# ==================== Response Wrapper Serializers ====================
+
+# Note: Standard API responses are handled directly in views for better flexibility
+
+class ActivityListResponseSerializer(serializers.Serializer):
+    """Response serializer for activity list endpoints."""
+    
+    activities = ActivityResponseSerializer(many=True, read_only=True)
+    total = serializers.IntegerField(read_only=True)
+
+
+class ActionListResponseSerializer(serializers.Serializer):
+    """Response serializer for action list endpoints."""
+    
+    actions = ActionResponseSerializer(many=True, read_only=True)
+    total = serializers.IntegerField(read_only=True)
+
+
+class LeaderboardResponseSerializer(serializers.Serializer):
+    """Response serializer for leaderboard endpoints."""
+    
+    leaderboard = LeaderboardEntrySerializer(many=True, read_only=True)
+    total = serializers.IntegerField(read_only=True)
+    currentUserRank = serializers.IntegerField(read_only=True, required=False)
