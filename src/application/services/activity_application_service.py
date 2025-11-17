@@ -63,9 +63,12 @@ class ActivityApplicationService:
         if command.leadId != context.current_user_id:
             raise ValueError("Lead ID must match the authenticated user")
         
-        # Create new activity using domain constructor
+        # Use provided activity_id (from blockchain) or generate a new one
         from src.domain.shared.value_objects.activity_id import ActivityId as DomainActivityId
-        activity_id = DomainActivityId.generate()
+        if command.activityId:
+            activity_id = command.activityId
+        else:
+            activity_id = DomainActivityId.generate()
         
         # TODO: Add points support to Activity domain model
         # The command contains points but the domain Activity doesn't support points yet

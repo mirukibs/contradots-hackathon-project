@@ -7,6 +7,8 @@ authentication logic separate and testable.
 
 from typing import Optional, Any
 import os
+from rest_framework import authentication
+from rest_framework import exceptions
 from .authentication_infrastructure import create_authentication_infrastructure
 
 
@@ -147,3 +149,80 @@ def reset_authentication_service() -> None:
     """Reset authentication service (useful for testing)."""
     global _auth_service
     _auth_service = None
+
+class CustomTokenAuthentication(authentication.BaseAuthentication):
+    """
+    Custom token authentication for Django REST Framework.
+    
+    Integrates our TokenAuthenticationInfrastructure with DRF's
+    authentication system.
+    """
+    
+    keyword = 'Token'
+    
+    def authenticate(self, request):
+        """
+        Authenticate the request and return a two-tuple of (user, token).
+        """
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        
+        if not auth_header:
+            return None
+        
+        try:
+            # Extract token from "Token <token>" format
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0] != self.keyword:
+                return None
+            
+            token = parts[1]
+            
+            # Get authentication service
+            auth_service = get_authentication_service()
+            
+            # Validate token
+            user_info = auth_service.validate_token(token)
+            
+            if not user_info:
+                raise exceptions.AuthenticationFailed('Invalid or expired token')
+            
+            # Create a simple user object with required attributes
+            class AuthenticatedUser:
+                def __init__(self, user_id, email):
+                    self.id = user_id
+                    self.pk = user_id  # Primary key required by DRF throttling
+                    self.username = user_id
+                    self.email = email
+                    self.is_authenticated = True
+                    self.is_active = True
+                    self.is_anonymous = False
+                    self.is_staff = False
+                    
+                    # Add groups property for role checking
+                    class MockGroups:
+                        def filter(self, name=None):
+                            class MockQuerySet:
+                                def exists(self):
+                                    return False
+                            return MockQuerySet()
+                    
+                    self.groups = MockGroups()
+                
+                def __str__(self):
+                    return self.email
+            
+            user = AuthenticatedUser(user_info['user_id'], user_info['email'])
+            
+            return (user, token)
+            
+        except exceptions.AuthenticationFailed:
+            raise
+        except Exception as e:
+            raise exceptions.AuthenticationFailed(f'Authentication failed: {str(e)}')
+    
+    def authenticate_header(self, request):
+        """
+        Return a string to be used as the value of the WWW-Authenticate
+        header in a 401 Unauthenticated response.
+        """
+        return self.keyword

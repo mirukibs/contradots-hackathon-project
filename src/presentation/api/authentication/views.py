@@ -47,15 +47,16 @@ def register_user(request: Request) -> Response:
         name: str = validated_data['name']
         email: str = validated_data['email']
         password: str = validated_data['password']
+        role: str = validated_data.get('role', 'lead')  # Default to lead
         
-        print(f"Registration attempt: {name}, {email}")
+        print(f"Registration attempt: {name}, {email}, role: {role}")
         
         try:
             # Step 1: Use Application Layer to register person through proper domain flow
             register_command = RegisterPersonCommand(
                 name=name,
                 email=email,
-                role='participant'  # Default role for registration
+                role=role  # Use role from request
             )
             
             # Step 2: Create application service instance with minimal dependencies
