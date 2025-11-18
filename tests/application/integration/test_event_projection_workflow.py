@@ -76,7 +76,8 @@ class TestEventDrivenProjectionsWorkflow(unittest.TestCase):
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test activity",
-            creator_id=self.person_id
+            creator_id=self.person_id,
+            points=100
         )
         self.activity_repo.find_by_id.return_value = test_activity
         
@@ -129,7 +130,8 @@ class TestEventDrivenProjectionsWorkflow(unittest.TestCase):
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test activity",
-            creator_id=self.person_id
+            creator_id=self.person_id,
+            points=100
         )
         self.activity_repo.find_by_id.return_value = test_activity
         
@@ -192,7 +194,8 @@ class TestEventDrivenProjectionsWorkflow(unittest.TestCase):
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test activity",
-            creator_id=self.person_id
+            creator_id=self.person_id,
+            points=100
         )
         
         # Set up mock responses

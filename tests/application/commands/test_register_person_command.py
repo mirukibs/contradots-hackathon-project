@@ -10,7 +10,7 @@ class TestRegisterPersonCommand:
         """Set up test fixtures"""
         self.valid_name = "John Doe"
         self.valid_email = "john.doe@example.com"
-        self.valid_role = "participant"
+        self.valid_role = "member"
 
     def test_command_creation_with_valid_data(self):
         """Test creating command with valid data"""
@@ -207,19 +207,17 @@ class TestRegisterPersonCommand:
                 command.validate()
                 assert False, f"Should have raised ValueError for role: {invalid_role}"
             except ValueError as e:
-                assert "Role must be one of: participant, lead" in str(e)
+                assert "Role must be one of: member, lead" in str(e)
 
     def test_validate_participant_role_case_insensitive(self):
         """Test validation accepts participant role in different cases"""
-        cases = ["participant", "PARTICIPANT", "Participant", "pArTiCiPaNt"]
-        
+        cases = ["member", "MEMBER", "Member", "mEmBeR"]
         for role_case in cases:
             command = RegisterPersonCommand(
                 name=self.valid_name,
                 email=self.valid_email,
                 role=role_case
             )
-            
             # Should not raise any exception
             command.validate()
 

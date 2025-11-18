@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List
 from src.application.dtos.activity_dto import ActivityDto
 from src.application.dtos.activity_details_dto import ActivityDetailsDto
+from src.domain.shared.value_objects.activity_id import ActivityId
 
 
 class ActivityQueryRepository(ABC):
@@ -26,7 +27,7 @@ class ActivityQueryRepository(ABC):
         pass
     
     @abstractmethod
-    def get_activity_details(self, activity_id: str) -> ActivityDetailsDto:
+    def get_activity_details(self, activity_id: ActivityId) -> ActivityDetailsDto:
         """
         Get detailed information for a specific activity including statistics.
         

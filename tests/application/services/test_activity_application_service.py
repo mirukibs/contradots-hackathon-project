@@ -64,7 +64,8 @@ class TestActivityApplicationService:
             activity_id=self.valid_activity_id,
             title="Beach Cleanup",
             description="Clean the beach",
-            creator_id=self.valid_lead_id
+            creator_id=self.valid_lead_id,
+            points=100
         )
         
         self.valid_create_command = CreateActivityCommand(
@@ -290,7 +291,8 @@ class TestActivityApplicationService:
             activity_id=self.valid_activity_id,
             title="Beach Cleanup",
             description="Clean the beach",
-            creator_id=different_lead_id  # Different creator
+            creator_id=different_lead_id,  # Different creator
+            points=100
         )
         self.mock_activity_repo.find_by_id.return_value = test_activity_different_creator
         

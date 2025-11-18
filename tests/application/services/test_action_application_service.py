@@ -52,7 +52,8 @@ class TestActionApplicationService:
             activity_id=self.valid_activity_id,
             title="Beach Cleanup",
             description="Clean the beach",
-            creator_id=PersonId.generate()
+            creator_id=PersonId.generate(),
+            points=100
         )
         
         # Create test action

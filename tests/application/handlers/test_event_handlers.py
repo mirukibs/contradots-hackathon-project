@@ -74,7 +74,8 @@ class TestReputationEventHandler:
             activity_id=self.activity_id,
             title="Beach Cleanup",
             description="Clean the beach",
-            creator_id=PersonId.generate()
+            creator_id=PersonId.generate(),
+            points=100
         )
         
         # Create test events
@@ -560,7 +561,8 @@ class TestEventHandlersIntegration:
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test",
-            creator_id=PersonId.generate()
+            creator_id=PersonId.generate(),
+            points=100
         )
         
         self.mock_person_repo.find_by_id.return_value = test_person

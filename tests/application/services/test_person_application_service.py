@@ -40,7 +40,7 @@ class TestPersonApplicationService:
         self.valid_command = RegisterPersonCommand(
             name="John Doe",
             email="john.doe@example.com", 
-            role="participant"
+            role="member"
         )
         
         # Create test person
@@ -75,7 +75,7 @@ class TestPersonApplicationService:
         invalid_command = RegisterPersonCommand(
             name="",  # Invalid empty name
             email="john.doe@example.com",
-            role="participant"
+            role="member"
         )
         
         # Act & Assert
@@ -131,27 +131,28 @@ class TestPersonApplicationService:
         assert str(saved_person.role) == "LEAD"
 
     def test_register_person_case_insensitive_role(self):
-        """Test registration with different case roles"""
-        test_cases = ["participant", "lead", "PARTICIPANT", "LEAD"]
-        
+        """Test registration with different case roles (member/lead)"""
+        test_cases = ["member", "lead", "MEMBER", "LEAD"]
+
         for role_input in test_cases:
             # Reset mocks
             self.mock_person_repo.reset_mock()
             self.mock_person_repo.find_all.return_value = []
-            
+
             command = RegisterPersonCommand(
                 name=f"Test User {role_input}",
                 email=f"test_{role_input.lower()}@example.com",
                 role=role_input
             )
-            
+
             # Act
             result = self.service.register_person(command)
-            
+
             # Assert
             assert isinstance(result, PersonId)
+            self.mock_person_repo.save.assert_called_once()
             saved_person = self.mock_person_repo.save.call_args[0][0]
-            expected_role = "MEMBER" if role_input.lower() == "participant" else "LEAD"
+            expected_role = "MEMBER" if role_input.lower() == "member" else "LEAD"
             assert str(saved_person.role) == expected_role
 
     def test_get_person_profile_success(self):
@@ -311,9 +312,9 @@ class TestPersonApplicationService:
         """Test registering multiple people with different emails"""
         # Arrange
         commands = [
-            RegisterPersonCommand(name="User 1", email="user1@example.com", role="participant"),
+            RegisterPersonCommand(name="User 1", email="user1@example.com", role="member"),
             RegisterPersonCommand(name="User 2", email="user2@example.com", role="lead"),
-            RegisterPersonCommand(name="User 3", email="user3@example.com", role="participant")
+            RegisterPersonCommand(name="User 3", email="user3@example.com", role="member")
         ]
         
         # Start with empty repository, then add people as they're registered
@@ -398,7 +399,7 @@ class TestPersonApplicationService:
         special_command = RegisterPersonCommand(
             name="José María O'Connor-Smith",
             email="jose.maria@example.com",
-            role="participant"
+            role="member"
         )
         self.mock_person_repo.find_all.return_value = []
         
@@ -423,7 +424,7 @@ class TestPersonApplicationService:
         command = RegisterPersonCommand(
             name="New User",
             email="user@example.com",  # Lowercase email
-            role="participant"
+            role="member"
         )
         
         # Act - Should succeed because emails are different case

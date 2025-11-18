@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 from src.application.dtos.action_dto import ActionDto
+from src.domain.shared.value_objects.person_id import PersonId
 
 
 class ActionQueryRepository(ABC):
@@ -25,7 +26,7 @@ class ActionQueryRepository(ABC):
         pass
     
     @abstractmethod
-    def get_person_actions(self, person_id: str) -> List[ActionDto]:
+    def get_person_actions(self, person_id: PersonId) -> List[ActionDto]:
         """
         Get all actions submitted by a specific person.
         

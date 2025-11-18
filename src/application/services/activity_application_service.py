@@ -152,13 +152,9 @@ class ActivityApplicationService:
         # Basic authentication check - anyone can view activity details
         if not context.is_authenticated:
             raise AuthorizationException("Authentication required to view activity details")
-        
-        # Convert ActivityId to string for query repository
-        activity_id_str = str(activity_id)
-        
         # Delegate to query repository for optimized read
         # The repository will raise ValueError if activity not found
-        return self._activity_query_repo.get_activity_details(activity_id_str)
+        return self._activity_query_repo.get_activity_details(activity_id)
     
     def deactivate_activity(self, command: DeactivateActivityCommand, context: AuthenticationContext) -> None:
         """

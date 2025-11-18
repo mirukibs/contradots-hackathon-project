@@ -187,7 +187,8 @@ class TestReputationRules(unittest.TestCase):
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test activity for engagement",
-            creator_id=self.creator_id
+            creator_id=self.creator_id,
+            points=100
         )
         
         # Mock repository returns
@@ -254,7 +255,8 @@ class TestReputationRules(unittest.TestCase):
             activity_id=self.activity_id,
             title="Test Activity",
             description="Test activity for engagement", 
-            creator_id=self.creator_id
+            creator_id=self.creator_id,
+            points=100
         )
         
         # Calculate activity score
@@ -270,7 +272,8 @@ class TestReputationRules(unittest.TestCase):
             activity_id=self.activity_id,
             title="Empty Activity", 
             description="Activity with no actions",
-            creator_id=self.creator_id
+            creator_id=self.creator_id,
+            points=100
         )
         
         # Calculate score with no actions
@@ -287,7 +290,8 @@ class TestReputationRules(unittest.TestCase):
             activity_id=self.activity_id,
             title="Mixed Activity",
             description="Activity with mixed action statuses",
-            creator_id=self.creator_id
+            creator_id=self.creator_id,
+            points=100
         )
         
         # Create actions with different statuses

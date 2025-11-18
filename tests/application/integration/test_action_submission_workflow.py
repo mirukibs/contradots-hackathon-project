@@ -86,7 +86,8 @@ class TestActionSubmissionWorkflow(unittest.TestCase):
             activity_id=self.activity_id,
             title="Beach Cleanup",
             description="Clean the beach",
-            creator_id=self.person_id
+            creator_id=self.person_id,
+            points=100
         )
         
     def test_complete_action_submission_workflow(self):

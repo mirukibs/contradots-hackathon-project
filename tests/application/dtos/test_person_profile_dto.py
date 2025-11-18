@@ -11,7 +11,7 @@ class TestPersonProfileDto:
         self.valid_person_id = "550e8400-e29b-41d4-a716-446655440000"
         self.valid_name = "John Doe"
         self.valid_email = "john.doe@example.com"
-        self.valid_role = "participant"
+        self.valid_role = "member"
         self.valid_reputation_score = 85
 
     def test_dto_creation_with_valid_data(self):

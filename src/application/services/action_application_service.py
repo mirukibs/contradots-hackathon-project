@@ -134,9 +134,8 @@ class ActionApplicationService:
         if person_id != context.current_user_id:
             # Allow LEADs to view any user's actions for validation purposes
             self._authorization_service.validate_role_permission(context, "validate_proof")
-        
         # Delegate to query repository for optimized read
-        return self._action_query_repo.get_person_actions(str(person_id))
+        return self._action_query_repo.get_person_actions(person_id)
     
     def simulate_proof_validation(self, command: ValidateProofCommand, context: AuthenticationContext) -> None:
         """

@@ -120,7 +120,7 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         register_command = RegisterPersonCommand(
             name="Bob Smith",
             email="bob@example.com",
-            role="participant"
+            role="member"
         )
         
         self.person_repo.find_all.return_value = []
@@ -167,7 +167,7 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         duplicate_command = RegisterPersonCommand(
             name="New User",
             email="duplicate@example.com",  # Same email
-            role="participant"
+            role="member"
         )
         
         # Act & Assert
@@ -183,7 +183,7 @@ class TestUserRegistrationWorkflow(unittest.TestCase):
         register_command = RegisterPersonCommand(
             name="Leaderboard User",
             email="leader@example.com",
-            role="participant"
+            role="member"
         )
         
         self.person_repo.find_all.return_value = []

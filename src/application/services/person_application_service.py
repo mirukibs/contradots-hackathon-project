@@ -64,7 +64,7 @@ class PersonApplicationService:
         # Create new person using domain factory
         # Map application layer role to domain role
         role_mapping = {
-            'participant': Role.MEMBER,
+            'member': Role.MEMBER,
             'lead': Role.LEAD
         }
         role = role_mapping[command.role.lower()]
