@@ -187,8 +187,7 @@ class ActivityApplicationService:
         if activity.creator_id != command.leadId:
             raise ValueError("Only the activity creator can deactivate the activity")
         
-        # TODO: Add is_active field and deactivate() method to Activity domain model
-        # activity.deactivate()
-        
-        # Save the updated activity  
+        # Deactivate the activity
+        activity.deactivate()
+        # Save the updated activity
         self._activity_repo.save(activity)

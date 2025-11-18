@@ -290,25 +290,22 @@ class DjangoActivityRepository(ActivityRepository):
     
     def _create_model_from_activity(self, activity: Activity) -> ActivityModel:
         """Create Django ActivityModel from domain Activity."""
-        # Find the lead person's profile
         lead_profile = PersonProfile.objects.get(person_id=activity.creator_id.value)
-        
         model = ActivityModel(
             activity_id=activity.activity_id.value,
-            name=activity.title,  # Map title to name
+            name=activity.title,
             description=activity.description,
             points=activity.points,
             lead_person=lead_profile,
-            is_active=True  # Default active
+            is_active=activity.is_active
         )
-        
         return model
     
     def _update_model_from_activity(self, model: ActivityModel, activity: Activity) -> None:
         """Update Django ActivityModel from domain Activity."""
         model.name = activity.title
         model.description = activity.description
-        # model.is_active would need to be part of domain Activity
+        model.is_active = activity.is_active
 
     def reactivate_activity(self, activity_id: ActivityId) -> None:
         """
@@ -487,12 +484,15 @@ class DjangoActionRepository(ActionRepository):
         person_profile = PersonProfile.objects.get(person_id=action.person_id.value)
         activity_model = ActivityModel.objects.get(activity_id=action.activity_id.value)
         
+        import logging
+        proof_hash = action.proof.strip() if isinstance(action.proof, str) else action.proof
+        logging.warning(f"REPO: creating model with proof_hash: '{proof_hash}', length: {len(proof_hash) if isinstance(proof_hash, str) else 'N/A'}")
         model = ActionModel(
             action_id=action.action_id.value,
             person=person_profile,
             activity=activity_model,
             description=f"Action for {activity_model.name}",  # Default description
-            proof_hash=action.proof,  # Map proof to proof_hash
+            proof_hash=proof_hash,  # Map proof to proof_hash
             status=action.status.value
         )
         
@@ -500,8 +500,13 @@ class DjangoActionRepository(ActionRepository):
     
     def _update_model_from_action(self, model: ActionModel, action: DomainAction) -> None:
         """Update Django ActionModel from domain Action."""
-        model.proof_hash = action.proof
-        model.status = action.status.value
+        import logging
+        proof_hash = action.proof.strip() if isinstance(action.proof, str) else action.proof
+        logging.warning(f"REPO: about to save proof_hash: '{proof_hash}', length: {len(proof_hash) if isinstance(proof_hash, str) else 'N/A'}")
+        if not (isinstance(proof_hash, str) and len(proof_hash) == 66 and proof_hash.startswith('0x')):
+            raise ValueError(f"Attempted to save malformed proof_hash: '{proof_hash}' (len={len(proof_hash) if isinstance(proof_hash, str) else 'N/A'})")
+        model.proof_hash = proof_hash
+        model.status = action.status.value.upper()
         
         # Update validation fields if action is validated
         if action.status == ActionStatus.VALIDATED and action.verified_at:

@@ -33,12 +33,14 @@ class ActionApplicationService:
         action_repo: ActionRepository,
         action_query_repo: ActionQueryRepository,
         activity_repo: ActivityRepository,
+        person_repo,
         event_publisher: EventPublisher,
         authorization_service: AuthorizationService
     ) -> None:
         self._action_repo = action_repo
         self._action_query_repo = action_query_repo
         self._activity_repo = activity_repo
+        self._person_repo = person_repo
         self._event_publisher = event_publisher
         self._authorization_service = authorization_service
     
@@ -81,17 +83,17 @@ class ActionApplicationService:
             action_id=action_id,
             person_id=command.personId,
             activity_id=command.activityId,
-            proof=f"{command.description} [Hash: {command.proofHash}]"  # Combine description and hash
+            proof=command.proofHash  # Only the hash
         )
         
         # Save the action
         self._action_repo.save(action)
-        
+
+
         # Publish domain events raised by the action
         for event in action.domain_events:
             self._event_publisher.publish(event)
         action.clear_domain_events()
-        
         return action.action_id
     
     def get_pending_validations(self, context: AuthenticationContext) -> List[ActionDto]:

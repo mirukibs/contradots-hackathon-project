@@ -244,26 +244,26 @@ export default function Activities() {
   const handleSubmitAction = async ({ activityId, description, proofHash, file }) => {
     setBusy(true);
     setError(null);
-    
     try {
       // Compute file hash if file provided and no manual hash
       let finalHash = proofHash || null;
       if (file && !finalHash) {
         finalHash = await computeFileHash(file);
       }
-
+      // Ensure 0x prefix for blockchain compatibility
+      if (finalHash && !finalHash.startsWith("0x") && finalHash.length === 64) {
+        finalHash = "0x" + finalHash;
+      }
       if (!finalHash) {
         setError("Please provide either a file or proof hash");
         setBusy(false);
         return;
       }
-
       const result = await actionAPI.submitAction({
         activityId: activityId,
         description: description,
         proofHash: finalHash
       });
-
       if (result.error) {
         setError(result.message || 'Failed to submit action');
       } else {

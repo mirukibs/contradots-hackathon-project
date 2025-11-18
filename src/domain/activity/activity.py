@@ -26,7 +26,8 @@ class Activity:
         description: str,
         creator_id: PersonId,
         points: int,
-        created_at: Optional[datetime] = None
+        created_at: Optional[datetime] = None,
+        is_active: bool = True
     ):
         """
         Initialize an Activity aggregate.
@@ -45,7 +46,16 @@ class Activity:
         self._creator_id = creator_id
         self._points = points
         self._created_at = created_at or datetime.now(timezone.utc)
-        self._domain_events: List[DomainEvent] = []
+        self._domain_events = []
+        self._is_active = is_active
+    @property
+    def is_active(self) -> bool:
+        """Get the activity's active status."""
+        return self._is_active
+
+    def deactivate(self) -> None:
+        """Deactivate the activity."""
+        self._is_active = False
     @property
     def points(self) -> int:
         """Get the activity's points value."""

@@ -325,6 +325,7 @@ def _get_action_service() -> ActionApplicationService:
     action_repo = DjangoActionRepository()
     action_query_repo = DjangoActionQueryRepository()
     activity_repo = DjangoActivityRepository()
+    person_repo = DjangoPersonRepository()
     # Use simple event publisher implementation
     event_publisher = SimpleEventPublisher()
     authorization_service = get_authorization_service()
@@ -333,6 +334,7 @@ def _get_action_service() -> ActionApplicationService:
         action_repo=action_repo,
         action_query_repo=action_query_repo,
         activity_repo=activity_repo,
+        person_repo=person_repo,
         event_publisher=event_publisher,
         authorization_service=authorization_service
     )
@@ -697,6 +699,14 @@ def reactivate_activity(request: Request) -> Response:
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_action(request: Request) -> Response:
+    import logging
+    logging.warning(f"RAW REQUEST BODY: {request.body}")
+    try:
+        import json as _json
+        body_json = _json.loads(request.body)
+        logging.warning(f"proofHash in body: {body_json.get('proofHash')}, length: {len(body_json.get('proofHash', ''))}")
+    except Exception as e:
+        logging.warning(f"Could not parse request body as JSON: {e}")
     """
     Submit a new action for an activity.
     

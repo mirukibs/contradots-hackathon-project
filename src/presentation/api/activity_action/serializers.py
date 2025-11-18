@@ -117,9 +117,9 @@ class SubmitActionSerializer(serializers.Serializer):
     )
     
     proofHash = serializers.CharField(
-        max_length=128,
-        min_length=32,
-        help_text="Hash of the proof document/image (32-128 characters)"
+        max_length=66,
+        min_length=66,
+        help_text="Hash of the proof document/image (must be 0x + 64 hex chars, 66 characters)"
     )
     
     def validate_activityId(self, value: str) -> str:
@@ -148,14 +148,20 @@ class SubmitActionSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Proof hash cannot be empty or just whitespace"
             )
-        
-        # Validate hash format (alphanumeric)
-        if not re.match(r'^[a-fA-F0-9]+$', value.strip()):
+        value = value.strip()
+        if len(value) != 66:
             raise serializers.ValidationError(
-                "Proof hash must contain only hexadecimal characters"
+                f"Proof hash must be exactly 66 characters (0x + 64 hex chars), got {len(value)} chars"
             )
-        
-        return value.strip()
+        if not value.startswith('0x'):
+            raise serializers.ValidationError(
+                "Proof hash must start with '0x'"
+            )
+        if not re.match(r'^0x[a-fA-F0-9]{64}$', value):
+            raise serializers.ValidationError(
+                "Proof hash must be a 0x-prefixed 64-character hexadecimal string"
+            )
+        return value
 
 
 class ActionResponseSerializer(serializers.Serializer):
