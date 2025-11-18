@@ -350,69 +350,79 @@ export default function Activities() {
 
         {/* List */}
         <section className="activities-list">
-          {filtered.map((a) => (
-            <div className="activity-card" key={a.activityId}>
-              <div className="card-head">
-                <h3>{a.name}</h3>
-                <span className={`status ${a.isActive ? 'active' : 'inactive'}`}>
-                  {a.isActive ? 'active' : 'inactive'}
-                </span>
-              </div>
-
-              <p className="description">{a.description}</p>
-
-              <div className="meta">
-                <p>ID: {a.activityId} | Lead: {a.leadName}</p>
-                <p>Points: {a.points}</p>
-              </div>
-
-              <div className="stats">
-                <span>Participants: {a.participantCount}</span>
-                <span>Actions Submitted: {a.totalActionsSubmitted}</span>
-              </div>
-
-              <div className="actions">
-                {/* Lead-only actions: Edit and Deactivate/Reactivate */}
-                {isLead() && (
-                  <button onClick={() => setOpenEditModal(a)}>Edit</button>
-                )}
-                
-                <button onClick={() => setOpenSubmitModal(a)} className="outline">Submit Action</button>
-
-                {isLead() && (
-                  a.isActive ? (
-                    <button className="danger" onClick={() => setOpenDeactivateModal(a.activityId)}>Deactivate</button>
-                  ) : (
-                    <button className="outline" onClick={() => handleEdit(a.activityId, { isActive: true })}>Reactivate</button>
-                  )
-                )}
-
-                <Link to={`/activity/${a.activityId}`}>
-                  <button className="link-btn">View Details</button>
-                </Link>
-              </div>
-
-              {/* Show minimal recent actions inline */}
-              {a.actions && a.actions.length > 0 && (
-                <div className="mini-actions">
-                  {a.actions.slice(0, 2).map((act) => (
-                    <div className="mini-action" key={act.actionId}>
-                      <div className="mini-left">
-                        <b>{act.personName}</b>
-                        <small className="muted">{new Date(act.submittedAt).toLocaleString()}</small>
-                      </div>
-                      <div className="mini-right">
-                        <span className={`tag ${act.status}`}>{act.status}</span>
-                        <p className="mini-desc">{act.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {loading ? (
+            <div className="loading-indicator" style={{ textAlign: 'center', padding: '2rem' }}>
+              <span role="status" aria-live="polite">Loading activities...</span>
             </div>
-          ))}
+          ) : error ? (
+            <div className="error-indicator" style={{ color: '#b71c1c', textAlign: 'center', padding: '2rem' }}>
+              <span role="alert">{error}</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="empty">No activities match your filters.</p>
+          ) : (
+            filtered.map((a) => (
+              <div className="activity-card" key={a.activityId}>
+                <div className="card-head">
+                  <h3>{a.name}</h3>
+                  <span className={`status ${a.isActive ? 'active' : 'inactive'}`}>
+                    {a.isActive ? 'active' : 'inactive'}
+                  </span>
+                </div>
 
-          {filtered.length === 0 && <p className="empty">No activities match your filters.</p>}
+                <p className="description">{a.description}</p>
+
+                <div className="meta">
+                  <p>ID: {a.activityId} | Lead: {a.leadName}</p>
+                  <p>Points: {a.points}</p>
+                </div>
+
+                <div className="stats">
+                  <span>Participants: {a.participantCount}</span>
+                  <span>Actions Submitted: {a.totalActionsSubmitted}</span>
+                </div>
+
+                <div className="actions">
+                  {/* Lead-only actions: Edit and Deactivate/Reactivate */}
+                  {isLead() && (
+                    <button onClick={() => setOpenEditModal(a)}>Edit</button>
+                  )}
+                  
+                  <button onClick={() => setOpenSubmitModal(a)} className="outline">Submit Action</button>
+
+                  {isLead() && (
+                    a.isActive ? (
+                      <button className="danger" onClick={() => setOpenDeactivateModal(a.activityId)}>Deactivate</button>
+                    ) : (
+                      <button className="outline" onClick={() => handleEdit(a.activityId, { isActive: true })}>Reactivate</button>
+                    )
+                  )}
+
+                  <Link to={`/activity/${a.activityId}`}>
+                    <button className="link-btn">View Details</button>
+                  </Link>
+                </div>
+
+                {/* Show minimal recent actions inline */}
+                {a.actions && a.actions.length > 0 && (
+                  <div className="mini-actions">
+                    {a.actions.slice(0, 2).map((act) => (
+                      <div className="mini-action" key={act.actionId}>
+                        <div className="mini-left">
+                          <b>{act.personName}</b>
+                          <small className="muted">{new Date(act.submittedAt).toLocaleString()}</small>
+                        </div>
+                        <div className="mini-right">
+                          <span className={`tag ${act.status}`}>{act.status}</span>
+                          <p className="mini-desc">{act.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </section>
       </main>
 
