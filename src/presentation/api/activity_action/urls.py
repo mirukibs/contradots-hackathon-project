@@ -19,33 +19,33 @@ urlpatterns = [
         views.create_activity,
         name='create_activity'
     ),
-    
+
     # Get all active activities
     path(
         'activities/',
         views.get_active_activities,
         name='get_active_activities'
     ),
-    
-    # Get specific activity details
-    path(
-        'activities/<str:activity_id>/',
-        views.get_activity_details,
-        name='get_activity_details'
-    ),
-    
-    # Deactivate activity
+
+    # Deactivate activity (must come before <str:activity_id>)
     path(
         'activities/deactivate/',
         views.deactivate_activity,
         name='deactivate_activity'
     ),
-    
-    # Reactivate activity
+
+    # Reactivate activity (must come before <str:activity_id>)
     path(
         'activities/reactivate/',
         views.reactivate_activity,
         name='reactivate_activity'
+    ),
+
+    # Get specific activity details (should be last among 'activities/' routes)
+    path(
+        'activities/<str:activity_id>/',
+        views.get_activity_details,
+        name='get_activity_details'
     ),
     
     # ==================== Action Endpoints ====================
