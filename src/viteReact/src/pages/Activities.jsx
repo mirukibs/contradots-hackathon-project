@@ -33,6 +33,9 @@ export default function Activities() {
   const [error, setError] = useState(null);
   const fileInputRef = useRef();
 
+  // AbortController for cancelling previous requests
+  const activitiesAbortRef = useRef(null);
+
   // Helper function to check if user is a lead
   const isLead = () => userRole?.toLowerCase() === 'lead';
 
@@ -51,6 +54,9 @@ export default function Activities() {
     loadAll();
     return () => {
       isMounted = false;
+      if (activitiesAbortRef.current) {
+        activitiesAbortRef.current.abort();
+      }
       console.log('[Activities] useEffect cleanup: component unmounted');
     };
   }, []);
@@ -77,10 +83,16 @@ export default function Activities() {
   };
 
   const loadActivities = async (isMounted = true) => {
+    // Abort any previous request
+    if (activitiesAbortRef.current) {
+      activitiesAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    activitiesAbortRef.current = abortController;
     setLoading(true);
     setError(null);
     try {
-      const result = await activityAPI.getActiveActivities();
+      const result = await activityAPI.getActiveActivities({ signal: abortController.signal });
       console.log('[Activities] loadActivities result:', result);
       if (result.error) {
         if (isMounted) setError(result.message || 'Failed to load activities');
@@ -103,10 +115,15 @@ export default function Activities() {
         if (isMounted) setActivities(transformedActivities);
       }
     } catch (err) {
-      if (isMounted) setError('Network error loading activities');
-      console.error('Load activities error:', err);
+      if (isMounted && err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        setError('Network error loading activities');
+        console.error('Load activities error:', err);
+      }
     } finally {
-      if (isMounted) setLoading(false);
+      // Only clear loading if this is the latest request
+      if (isMounted && activitiesAbortRef.current === abortController) {
+        setLoading(false);
+      }
     }
   };
 
@@ -313,7 +330,7 @@ export default function Activities() {
         {/* Role-based information message */}
         {!isLead() && (
           <div className="role-info" style={{
-            backgroundColor: '#e3f2fd',
+            // backgroundColor: '#e3f2fd',
             border: '1px solid #1976d2',
             borderRadius: '6px',
             padding: '12px',

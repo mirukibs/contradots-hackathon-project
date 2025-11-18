@@ -121,11 +121,15 @@ export const activityAPI = {
     }
   },
 
-  async getActiveActivities() {
+  async getActiveActivities(options = {}) {
     try {
-      const response = await apiClient.get("/activity_action/activities/");
+      const response = await apiClient.get("/activity_action/activities/", { signal: options.signal });
       return response.data;
     } catch (error) {
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        // Request was cancelled, do not treat as error
+        return {};
+      }
       if (error.response) return error.response.data;
       return { error: "NETWORK_ERROR", message: error.message };
     }
