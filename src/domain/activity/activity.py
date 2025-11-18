@@ -25,6 +25,7 @@ class Activity:
         title: str,
         description: str,
         creator_id: PersonId,
+        points: int,
         created_at: Optional[datetime] = None
     ):
         """
@@ -35,14 +36,20 @@ class Activity:
             title: Title of the activity
             description: Detailed description of the activity
             creator_id: Identifier of the person who created the activity
+            points: Points value for the activity
             created_at: Timestamp when activity was created (default: now)
         """
         self._activity_id = activity_id
         self._title = title
         self._description = description
         self._creator_id = creator_id
+        self._points = points
         self._created_at = created_at or datetime.now(timezone.utc)
         self._domain_events: List[DomainEvent] = []
+    @property
+    def points(self) -> int:
+        """Get the activity's points value."""
+        return self._points
     
     @property
     def activity_id(self) -> ActivityId:

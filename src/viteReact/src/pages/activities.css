@@ -151,9 +151,11 @@ button{
 .mini-action { display: flex; gap: 12px; align-items: flex-start; background: rgba(255,255,255,0.01); padding: 8px; border-radius: 8px; }
 .mini-left { min-width: 68px; text-align: center; color: var(--muted); }
 .mini-right .tag { padding: 4px 8px; border-radius: 8px; font-size: 0.75rem; margin-right: 8px; }
-.tag.pending { background: #f6c85f; color: #2d1400; }
+.tag.submitted { background: #f6c85f; color: #2d1400; }
 .tag.validated { background: #2dd68a; color: #04321a; }
 .tag.rejected { background: #ff9b9b; color: #3b0a0a; }
+/* Legacy support for old status names */
+.tag.pending { background: #f6c85f; color: #2d1400; }
 .mini-desc { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
 
 /* empty state */

@@ -136,7 +136,7 @@ class ActionApplicationService:
             self._authorization_service.validate_role_permission(context, "validate_proof")
         
         # Delegate to query repository for optimized read
-        return self._action_query_repo.get_person_actions(person_id)
+        return self._action_query_repo.get_person_actions(str(person_id))
     
     def simulate_proof_validation(self, command: ValidateProofCommand, context: AuthenticationContext) -> None:
         """

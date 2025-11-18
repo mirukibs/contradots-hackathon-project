@@ -6,7 +6,7 @@ const API_BASE_URL = "http://localhost:8000/api/v1";
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   }
@@ -113,7 +113,7 @@ export const authAPI = {
 export const activityAPI = {
   async createActivity(data) {
     try {
-      const response = await apiClient.post("/activity_action/create", data);
+      const response = await apiClient.post("/activity_action/activities/create/", data);
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -123,7 +123,7 @@ export const activityAPI = {
 
   async getActiveActivities() {
     try {
-      const response = await apiClient.get("/activity_action/active");
+      const response = await apiClient.get("/activity_action/activities/");
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -133,7 +133,28 @@ export const activityAPI = {
 
   async getActivityDetails(activityId) {
     try {
-      const response = await apiClient.get(`/activity_action/${activityId}/details`);
+      const response = await apiClient.get(`/activity_action/activities/${activityId}/`);
+      return response.data;
+    } catch (error) {
+      if (error.response) return error.response.data;
+      return { error: "NETWORK_ERROR", message: error.message };
+    }
+  },
+
+  async updateActivity(data) {
+    try {
+      // Note: Backend doesn't have an update endpoint yet, this would need to be implemented
+      // For now, return an error indicating this feature is not available
+      return { error: "NOT_IMPLEMENTED", message: "Activity update is not yet implemented in the backend" };
+    } catch (error) {
+      if (error.response) return error.response.data;
+      return { error: "NETWORK_ERROR", message: error.message };
+    }
+  },
+
+  async reactivateActivity(activityId) {
+    try {
+      const response = await apiClient.post("/activity_action/activities/reactivate/", { activityId });
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -143,7 +164,7 @@ export const activityAPI = {
 
   async deactivateActivity(activityId) {
     try {
-      const response = await apiClient.post("/activity_action/deactivate", { activityId });
+      const response = await apiClient.post("/activity_action/activities/deactivate/", { activityId });
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -157,7 +178,7 @@ export const activityAPI = {
 export const actionAPI = {
   async submitAction(data) {
     try {
-      const response = await apiClient.post("/activity_action/submit", data);
+      const response = await apiClient.post("/activity_action/actions/submit/", data);
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -167,7 +188,7 @@ export const actionAPI = {
 
   async getPendingValidations() {
     try {
-      const response = await apiClient.get("/activity_action/pending-validations");
+      const response = await apiClient.get("/activity_action/actions/pending/");
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -177,7 +198,7 @@ export const actionAPI = {
 
   async getMyActions() {
     try {
-      const response = await apiClient.get("/activity_action/my-actions");
+      const response = await apiClient.get("/activity_action/actions/my-actions/");
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;
@@ -187,7 +208,7 @@ export const actionAPI = {
 
   async validateProof(data) {
     try {
-      const response = await apiClient.post("/activity_action/validate-proof", data);
+      const response = await apiClient.post("/activity_action/actions/validate/", data);
       return response.data;
     } catch (error) {
       if (error.response) return error.response.data;

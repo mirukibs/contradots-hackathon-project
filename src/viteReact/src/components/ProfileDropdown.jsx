@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI, leaderboardAPI } from "../api/client";
+import { authAPI, leaderboardAPI, actionAPI } from "../api/client";
 import "./ProfileDropdown.css";
 
 export default function ProfileDropdown() {
@@ -16,16 +16,28 @@ export default function ProfileDropdown() {
         setLoading(true);
         
         // Load comprehensive profile data
-        const result = await leaderboardAPI.getMyProfile();
-        if (!result.error && result.data) {
-          setProfile(result.data);
+        const [profileResult, rankResult, actionsResult] = await Promise.all([
+          leaderboardAPI.getMyProfile(),
+          leaderboardAPI.getMyRank(),
+          actionAPI.getMyActions()
+        ]);
+
+        if (!profileResult.error) {
+          // Combine all the data
+          const enhancedProfile = {
+            ...profileResult,
+            rank: rankResult.error ? null : rankResult.rank,
+            actionCount: actionsResult.error ? 0 : (actionsResult.actions?.length || 0)
+          };
+          
+          setProfile(enhancedProfile);
           
           // Extract user details for better display
           setUserDetails({
-            name: result.data.name || 'Unknown User',
-            email: result.data.email || 'No email',
-            role: result.data.role || 'member',
-            initials: (result.data.name || result.data.email || 'U')
+            name: profileResult.name || 'Unknown User',
+            email: profileResult.email || 'No email',
+            role: profileResult.role?.toLowerCase() || 'member',
+            initials: (profileResult.name || profileResult.email || 'U')
               .split(' ')
               .map(word => word.charAt(0))
               .slice(0, 2)
@@ -123,7 +135,7 @@ export default function ProfileDropdown() {
               <div className="profile-stats">
                 <div className="stat-item">
                   <label>Score:</label>
-                  <span>{profile?.totalScore || 0}</span>
+                  <span>{profile?.reputationScore || 0}</span>
                 </div>
                 <div className="stat-item">
                   <label>Rank:</label>
@@ -136,19 +148,6 @@ export default function ProfileDropdown() {
               </div>
               
               <hr className="menu-divider" />
-              
-              <button 
-                className="menu-item"
-                onClick={() => {
-                  closeMenu();
-                  // Could navigate to a detailed profile page in the future
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-                View Profile
-              </button>
               
               <button 
                 className="menu-item logout"

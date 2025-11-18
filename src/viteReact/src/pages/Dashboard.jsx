@@ -23,16 +23,26 @@ export default function Dashboard() {
         if (profileResult.error) {
           setError(profileResult.message);
         } else {
-          setProfile(profileResult.data);
+          setProfile(profileResult);
         }
 
         // Load recent actions
         const actionsResult = await actionAPI.getMyActions();
-        if (!actionsResult.error && actionsResult.data) {
-          // Get the 5 most recent actions
-          const recent = actionsResult.data
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 5);
+        if (!actionsResult.error && actionsResult.actions) {
+          // Get the 5 most recent actions and transform to match ActionDto
+          const recent = actionsResult.actions
+            .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+            .slice(0, 5)
+            .map(action => ({
+              actionId: action.actionId,
+              activityTitle: action.activityName,
+              activityName: action.activityName,
+              personName: action.personName,
+              description: action.description,
+              status: action.status, // submitted, validated, rejected
+              submittedAt: action.submittedAt,
+              createdAt: action.submittedAt // for compatibility
+            }));
           setRecentActions(recent);
         }
 
@@ -69,7 +79,7 @@ export default function Dashboard() {
           <div className="score-box">
             <h3>Your Social Score</h3>
             <p className="score">
-              {loading ? '...' : (profile?.totalScore || 0)}
+              {loading ? '...' : (profile?.reputationScore || 0)}
             </p>
           </div>
 
@@ -83,6 +93,11 @@ export default function Dashboard() {
             <Link to="/leaderboard">
               <button className="outline">Leaderboard</button>
             </Link>
+            {profile?.role?.toLowerCase() === 'lead' && (
+              <Link to="/pending-validations">
+                <button className="outline">Validate Actions</button>
+              </Link>
+            )}
           </div>
         </section>
 
@@ -97,11 +112,11 @@ export default function Dashboard() {
 
           {!loading && recentActions.map((a, i) => (
             <div className="action-item" key={a.actionId || i}>
-              <b>{a.activityTitle || 'Activity'}</b>
+              <b>{a.activityName || 'Activity'}</b>
               <p>{a.description}</p>
               <span className={`status ${a.status}`}>{a.status}</span>
               <small className="timestamp">
-                {new Date(a.createdAt).toLocaleString()}
+                {new Date(a.submittedAt).toLocaleString()}
               </small>
             </div>
           ))}

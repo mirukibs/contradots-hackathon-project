@@ -284,6 +284,7 @@ class DjangoActivityRepository(ActivityRepository):
             title=model.name,  # Map name to title
             description=model.description,
             creator_id=PersonId(model.lead_person.person_id),
+            points=model.points,
             created_at=model.created_at
         )
     
@@ -296,7 +297,7 @@ class DjangoActivityRepository(ActivityRepository):
             activity_id=activity.activity_id.value,
             name=activity.title,  # Map title to name
             description=activity.description,
-            points=50,  # Default points - this should be in domain model
+            points=activity.points,
             lead_person=lead_profile,
             is_active=True  # Default active
         )
@@ -308,6 +309,20 @@ class DjangoActivityRepository(ActivityRepository):
         model.name = activity.title
         model.description = activity.description
         # model.is_active would need to be part of domain Activity
+
+    def reactivate_activity(self, activity_id: ActivityId) -> None:
+        """
+        Reactivate a deactivated activity.
+        
+        Args:
+            activity_id: The unique identifier of the activity to reactivate
+        """
+        try:
+            model = ActivityModel.objects.get(activity_id=activity_id.value)
+            model.is_active = True
+            model.save()
+        except ObjectDoesNotExist:
+            raise ValueError(f"Activity with ID {activity_id.value} not found")
 
 
 class DjangoActionRepository(ActionRepository):

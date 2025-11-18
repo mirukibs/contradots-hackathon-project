@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { activityAPI, actionAPI, authAPI, apiUtils } from "../api/client";
+import { activityAPI, actionAPI, authAPI, leaderboardAPI } from "../api/client";
 import "./activities.css";
 
 /**
- * Activities page with inline modals (Create / Edit / Submit / Deactivate)
- * - Single-file for hackathon speed
- * - Glassmorphism modal style
+ * Activities page with role-based access control
+ * - LEAD users: Can create, edit, and deactivate activities
+ * - MEMBER users: Can only view activities and submit actions
  * - Full backend integration with Django REST API
  */
 
@@ -16,6 +16,10 @@ export default function Activities() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const navigate = useNavigate();
+
+  // User profile and role state
+  const [userProfile, setUserProfile] = useState(null);
+  const [userRole, setUserRole] = useState('member'); // Default to member
 
   // Modal state
   const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -29,39 +33,80 @@ export default function Activities() {
   const [error, setError] = useState(null);
   const fileInputRef = useRef();
 
-  // Load activities from backend on mount
+  // Helper function to check if user is a lead
+  const isLead = () => userRole?.toLowerCase() === 'lead';
+
+  // Load activities and user profile on mount
+
   useEffect(() => {
-    loadActivities();
+    let isMounted = true;
+    const loadAll = async () => {
+      console.log('[Activities] useEffect: loading data...');
+      try {
+        await loadData(isMounted);
+      } catch (e) {
+        console.error('[Activities] useEffect error:', e);
+      }
+    };
+    loadAll();
+    return () => {
+      isMounted = false;
+      console.log('[Activities] useEffect cleanup: component unmounted');
+    };
   }, []);
 
-  const loadActivities = async () => {
-    setLoading(true);
-    setError(null);
-    
+  const loadData = async (isMounted = true) => {
+    await Promise.all([
+      loadActivities(isMounted),
+      loadUserProfile(isMounted)
+    ]);
+  };
+
+  const loadUserProfile = async (isMounted = true) => {
     try {
-      const result = await activityAPI.getActiveActivities();
-      if (result.error) {
-        setError(result.message || 'Failed to load activities');
-      } else {
-        // Transform backend data to match expected format
-        const transformedActivities = (result.activities || []).map(activity => ({
-          id: activity.activityId,
-          name: activity.name,
-          description: activity.description,
-          lead: activity.leadName,
-          points: activity.points,
-          status: activity.isActive ? "active" : "inactive",
-          submitted: 0, // Will be loaded separately or calculated
-          validated: 0, // Will be loaded separately or calculated
-          actions: [], // Will be loaded separately if needed
-        }));
-        setActivities(transformedActivities);
+      const profileResult = await leaderboardAPI.getMyProfile();
+      console.log('[Activities] loadUserProfile result:', profileResult);
+      if (!profileResult.error && isMounted) {
+        setUserProfile(profileResult);
+        setUserRole(profileResult.role?.toLowerCase() || 'member');
       }
     } catch (err) {
-      setError('Network error loading activities');
+      console.error('Failed to load user profile:', err);
+      if (isMounted) setUserRole('member'); // Default to member on error
+    }
+  };
+
+  const loadActivities = async (isMounted = true) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await activityAPI.getActiveActivities();
+      console.log('[Activities] loadActivities result:', result);
+      if (result.error) {
+        if (isMounted) setError(result.message || 'Failed to load activities');
+      } else {
+        // Transform backend data to match frontend format
+        const transformedActivities = (result.activities || []).map(activity => ({
+          activityId: activity.activityId, // Keep original field name
+          id: activity.activityId, // For compatibility
+          name: activity.name,
+          description: activity.description,
+          leadName: activity.leadName, // Keep original field name
+          lead: activity.leadName, // For display compatibility
+          points: activity.points,
+          isActive: activity.isActive, // Keep original field name
+          status: activity.isActive ? "active" : "inactive", // For filter compatibility
+          participantCount: activity.participantCount || 0,
+          totalActionsSubmitted: activity.totalActionsSubmitted || 0,
+          actions: [], // Will be loaded separately if needed
+        }));
+        if (isMounted) setActivities(transformedActivities);
+      }
+    } catch (err) {
+      if (isMounted) setError('Network error loading activities');
       console.error('Load activities error:', err);
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
   };
 
@@ -74,10 +119,12 @@ export default function Activities() {
   // Filtering + sorting
   const filtered = activities
     .filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
-    .filter((a) => (statusFilter === "all" ? true : a.status === statusFilter))
+    .filter((a) => (statusFilter === "all" ? true : 
+      (statusFilter === "active" && a.isActive) || 
+      (statusFilter === "inactive" && !a.isActive)))
     .sort((a, b) => {
-      if (sortBy === "newest") return b.id - a.id;
-      if (sortBy === "oldest") return a.id - b.id;
+      if (sortBy === "newest") return b.activityId.localeCompare(a.activityId);
+      if (sortBy === "oldest") return a.activityId.localeCompare(b.activityId);
       if (sortBy === "highpoints") return b.points - a.points;
       if (sortBy === "lowpoints") return a.points - b.points;
       return 0;
@@ -87,20 +134,18 @@ export default function Activities() {
   const handleCreate = async (payload) => {
     setBusy(true);
     setError(null);
-    
     try {
       const result = await activityAPI.createActivity({
         name: payload.name,
         description: payload.description,
         points: Number(payload.points)
       });
-      
       if (result.error) {
         setError(result.message || 'Failed to create activity');
       } else {
-        // Refresh activities list
-        await loadActivities();
+        // Close modal immediately, then refresh activities list
         setOpenCreateModal(false);
+        await loadActivities();
       }
     } catch (err) {
       setError('Network error creating activity');
@@ -116,24 +161,36 @@ export default function Activities() {
     setError(null);
     
     try {
-      // Transform payload to match API format
-      const updateData = {
-        activityId: activityId,
-        title: payload.name || payload.title,
-        description: payload.description,
-        points: Number(payload.points),
-        tags: payload.tags || [],
-        expiry: payload.expiry || null
-      };
-
-      const result = await activityAPI.updateActivity(updateData);
-
-      if (result.error) {
-        setError(result.message || 'Failed to update activity');
+      // Check if this is a reactivation request
+      if (payload.isActive === true) {
+        // This is a reactivation request
+        const result = await activityAPI.reactivateActivity(activityId);
+        
+        if (result.error) {
+          setError(result.message || 'Failed to reactivate activity');
+        } else {
+          // Success - refresh data
+          await loadActivities();
+        }
       } else {
-        // Success - refresh data and close modal
-        await loadActivities();
-        setOpenEditModal(null);
+        // This is an edit activity details request
+        // Transform payload to match API format
+        const updateData = {
+          activityId: activityId,
+          name: payload.name || payload.title,
+          description: payload.description,
+          points: Number(payload.points)
+        };
+
+        const result = await activityAPI.updateActivity(updateData);
+
+        if (result.error) {
+          setError(result.message || 'Failed to update activity');
+        } else {
+          // Success - refresh data and close modal
+          await loadActivities();
+          setOpenEditModal(null);
+        }
       }
     } catch (err) {
       setError('Network error updating activity');
@@ -215,7 +272,8 @@ export default function Activities() {
     const arrayBuffer = await file.arrayBuffer();
     const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
     const hashArray = Array.from(new Uint8Array(digest));
-    const hashHex = "0x" + hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    // Return hash without 0x prefix to match backend validation
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     return hashHex;
   };
 
@@ -228,7 +286,9 @@ export default function Activities() {
           <Link to="/dashboard" style={{ color: 'white', textDecoration: 'none', marginRight: '1rem' }}>
             ← Dashboard
           </Link>
-          <button className="create-btn" onClick={() => setOpenCreateModal(true)}>+ Create</button>
+          {isLead() && (
+            <button className="create-btn" onClick={() => setOpenCreateModal(true)}>+ Create</button>
+          )}
           <button 
             onClick={handleLogout}
             style={{
@@ -249,6 +309,20 @@ export default function Activities() {
       <main className="activities-page">
 
         <h2>Activities</h2>
+
+        {/* Role-based information message */}
+        {!isLead() && (
+          <div className="role-info" style={{
+            backgroundColor: '#e3f2fd',
+            border: '1px solid #1976d2',
+            borderRadius: '6px',
+            padding: '12px',
+            marginBottom: '20px',
+            color: '#1565c0'
+          }}>
+            <p>ℹ️ You are viewing as a member. You can submit actions and view activity details. Only leads can create, edit, and manage activities.</p>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="filters">
@@ -277,35 +351,43 @@ export default function Activities() {
         {/* List */}
         <section className="activities-list">
           {filtered.map((a) => (
-            <div className="activity-card" key={a.id}>
+            <div className="activity-card" key={a.activityId}>
               <div className="card-head">
                 <h3>{a.name}</h3>
-                <span className={`status ${a.status}`}>{a.status}</span>
+                <span className={`status ${a.isActive ? 'active' : 'inactive'}`}>
+                  {a.isActive ? 'active' : 'inactive'}
+                </span>
               </div>
 
               <p className="description">{a.description}</p>
 
               <div className="meta">
-                <p>ID: {a.id} | Lead: Person #{a.lead}</p>
+                <p>ID: {a.activityId} | Lead: {a.leadName}</p>
                 <p>Points: {a.points}</p>
               </div>
 
               <div className="stats">
-                <span>Submitted: {a.submitted}</span>
-                <span>Validated: {a.validated}</span>
+                <span>Participants: {a.participantCount}</span>
+                <span>Actions Submitted: {a.totalActionsSubmitted}</span>
               </div>
 
               <div className="actions">
-                <button onClick={() => setOpenEditModal(a)}>Edit</button>
+                {/* Lead-only actions: Edit and Deactivate/Reactivate */}
+                {isLead() && (
+                  <button onClick={() => setOpenEditModal(a)}>Edit</button>
+                )}
+                
                 <button onClick={() => setOpenSubmitModal(a)} className="outline">Submit Action</button>
 
-                {a.status === "active" ? (
-                  <button className="danger" onClick={() => setOpenDeactivateModal(a.id)}>Deactivate</button>
-                ) : (
-                  <button className="outline" onClick={() => handleEdit(a.id, { status: "active" })}>Reactivate</button>
+                {isLead() && (
+                  a.isActive ? (
+                    <button className="danger" onClick={() => setOpenDeactivateModal(a.activityId)}>Deactivate</button>
+                  ) : (
+                    <button className="outline" onClick={() => handleEdit(a.activityId, { isActive: true })}>Reactivate</button>
+                  )
                 )}
 
-                <Link to={`/activity/${a.id}`}>
+                <Link to={`/activity/${a.activityId}`}>
                   <button className="link-btn">View Details</button>
                 </Link>
               </div>
@@ -316,8 +398,8 @@ export default function Activities() {
                   {a.actions.slice(0, 2).map((act) => (
                     <div className="mini-action" key={act.actionId}>
                       <div className="mini-left">
-                        <b>#{act.personId}</b>
-                        <small className="muted">{new Date(act.createdAt).toLocaleString()}</small>
+                        <b>{act.personName}</b>
+                        <small className="muted">{new Date(act.submittedAt).toLocaleString()}</small>
                       </div>
                       <div className="mini-right">
                         <span className={`tag ${act.status}`}>{act.status}</span>
@@ -353,7 +435,7 @@ export default function Activities() {
         <Modal onClose={() => setOpenEditModal(null)} title="Edit Activity">
           <EditActivityForm
             activity={openEditModal}
-            onSave={(payload) => handleEdit(openEditModal.id, payload)}
+            onSave={(payload) => handleEdit(openEditModal.activityId, payload)}
             onCancel={() => setOpenEditModal(null)}
           />
         </Modal>
@@ -365,7 +447,7 @@ export default function Activities() {
           <SubmitActionForm
             activity={openSubmitModal}
             onSubmit={async ({ description, proofHash, file }) =>
-              await handleSubmitAction({ activityId: openSubmitModal.id, description, proofHash, file })
+              await handleSubmitAction({ activityId: openSubmitModal.activityId, description, proofHash, file })
             }
             onCancel={() => setOpenSubmitModal(null)}
             busy={busy}
@@ -417,7 +499,7 @@ function Modal({ title, children, onClose }) {
    CreateActivityForm
    --------------------------- */
 function CreateActivityForm({ onCreate, onCancel }) {
-  const [form, setForm] = useState({ name: "", description: "", lead: "", points: "" });
+  const [form, setForm] = useState({ name: "", description: "", points: "" });
   const [err, setErr] = useState(null);
 
   const submit = (e) => {
@@ -429,9 +511,6 @@ function CreateActivityForm({ onCreate, onCancel }) {
     }
     if (!form.description || form.description.length > 256) {
       return setErr("Description required (1-256 chars)");
-    }
-    if (!form.lead || Number(form.lead) <= 0) {
-      return setErr("Lead Person ID required (positive integer)");
     }
     if (!form.points || Number(form.points) < 1 || Number(form.points) > 1000) {
       return setErr("Points required (1-1000)");
@@ -450,10 +529,6 @@ function CreateActivityForm({ onCreate, onCancel }) {
 
       <div className="row">
         <div style={{ flex: 1 }}>
-          <label>Lead Person ID</label>
-          <input type="number" value={form.lead} onChange={(e) => setForm({ ...form, lead: e.target.value })} />
-        </div>
-        <div style={{ flex: 1, marginLeft: 12 }}>
           <label>Points</label>
           <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
         </div>
@@ -473,7 +548,11 @@ function CreateActivityForm({ onCreate, onCancel }) {
    EditActivityForm
    --------------------------- */
 function EditActivityForm({ activity, onSave, onCancel }) {
-  const [form, setForm] = useState({ name: activity.name || "", description: activity.description || "", lead: activity.lead || "", points: activity.points || "" });
+  const [form, setForm] = useState({ 
+    name: activity.name || "", 
+    description: activity.description || "", 
+    points: activity.points || "" 
+  });
   const [err, setErr] = useState(null);
 
   const submit = (e) => {
@@ -483,8 +562,7 @@ function EditActivityForm({ activity, onSave, onCancel }) {
     if (!form.name || form.name.length > 32) {
       return setErr("Name required (1-32 chars)");
     }
-    // Only allow name and date (tech lead asked for name + date editing). We'll keep points editable too for admin convenience.
-    onSave({ name: form.name, description: form.description, lead: Number(form.lead), points: Number(form.points) });
+    onSave({ name: form.name, description: form.description, points: Number(form.points) });
   };
 
   return (
@@ -497,10 +575,6 @@ function EditActivityForm({ activity, onSave, onCancel }) {
 
       <div className="row">
         <div style={{ flex: 1 }}>
-          <label>Lead Person ID</label>
-          <input type="number" value={form.lead} onChange={(e) => setForm({ ...form, lead: e.target.value })} />
-        </div>
-        <div style={{ flex: 1, marginLeft: 12 }}>
           <label>Points</label>
           <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
         </div>
@@ -525,12 +599,32 @@ function SubmitActionForm({ activity, onSubmit, onCancel, busy, fileRef }) {
   const [file, setFile] = useState(null);
   const [err, setErr] = useState(null);
 
+  const validateProofHash = (hash) => {
+    if (!hash) return false;
+    // Remove 0x prefix if present
+    const cleanHash = hash.startsWith('0x') ? hash.slice(2) : hash;
+    // Check valid hex lengths: 32 (MD5), 40 (SHA-1), 64 (SHA-256), 128 (SHA-512)
+    const validLengths = [32, 40, 64, 128];
+    const isValidLength = validLengths.includes(cleanHash.length);
+    const isValidHex = /^[a-fA-F0-9]+$/.test(cleanHash);
+    return isValidLength && isValidHex;
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setErr(null);
 
-    if (!description || description.length > 256) return setErr("Description required (1-256 chars)");
-    if (!file && !proofHash) return setErr("Provide a proof file or a proof hash");
+    if (!description || description.length > 256) {
+      return setErr("Description required (1-256 chars)");
+    }
+    
+    if (!file && !proofHash) {
+      return setErr("Provide a proof file or a proof hash");
+    }
+    
+    if (proofHash && !validateProofHash(proofHash)) {
+      return setErr("Proof hash must be valid hexadecimal (32, 40, 64, or 128 characters), optionally prefixed with 0x");
+    }
 
     await onSubmit({ description, proofHash: proofHash || null, file: file || null });
   };
@@ -549,8 +643,13 @@ function SubmitActionForm({ activity, onSubmit, onCancel, busy, fileRef }) {
       <label>Upload Proof (optional)</label>
       <input type="file" ref={fileRef} onChange={onFileChange} accept=".jpg,.jpeg,.png,.pdf" />
 
-      <label>Or enter proof hash</label>
-      <input value={proofHash} onChange={(e) => setProofHash(e.target.value)} placeholder="0xabc123..." />
+      <label>Or enter proof hash (32, 40, 64, or 128 hex characters)</label>
+      <input 
+        value={proofHash} 
+        onChange={(e) => setProofHash(e.target.value)} 
+        placeholder="0xabc123..." 
+        pattern="^(0x)?[a-fA-F0-9]{32}$|^(0x)?[a-fA-F0-9]{40}$|^(0x)?[a-fA-F0-9]{64}$|^(0x)?[a-fA-F0-9]{128}$"
+      />
 
       {err && <div className="form-error">{err}</div>}
 

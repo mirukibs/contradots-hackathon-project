@@ -153,6 +153,22 @@
   font-weight: 600;
 }
 
+.action-item .validated {
+  background: #1f7a18;
+  color: white;
+}
+
+.action-item .submitted {
+  background: #705300;
+  color: white;
+}
+
+.action-item .rejected {
+  background: #7a1a18;
+  color: white;
+}
+
+/* Legacy status support */
 .action-item .approved {
   background: #1f7a18;
   color: white;
@@ -160,11 +176,6 @@
 
 .action-item .pending {
   background: #705300;
-  color: white;
-}
-
-.action-item .rejected {
-  background: #7a1a18;
   color: white;
 }
 

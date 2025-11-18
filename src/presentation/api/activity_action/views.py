@@ -217,19 +217,24 @@ def _get_auth_context(request: Request) -> AuthenticationContext:
     if not request.user or not request.user.is_authenticated:
         raise AuthorizationException("Authentication required")
     
-    # Get person_id from user (avoid domain object creation here)
+    # Get person_id from user's PersonProfile
     try:
-        person_id_str = str(request.user.username)  # Use string directly
-    except Exception:
-        raise AuthorizationException("Invalid user authentication state")
+        from ....infrastructure.django_app.models import PersonProfile
+        person_profile = PersonProfile.objects.get(user=request.user)
+        person_id_str = str(person_profile.person_id)
+    except PersonProfile.DoesNotExist:
+        raise AuthorizationException("User profile not found")
+    except Exception as e:
+        raise AuthorizationException(f"Invalid user authentication state: {str(e)}")
+    
+    # Create domain PersonId for repository calls
+    from ....domain.shared.value_objects.person_id import PersonId
+    person_id_obj = PersonId(person_id_str)
     
     # Get the person's role using the repository through string ID
     from ....infrastructure.persistence.django_repositories import DjangoPersonRepository
     person_repo = DjangoPersonRepository()
     try:
-        # Create domain PersonId only when calling repository
-        from ....domain.shared.value_objects.person_id import PersonId
-        person_id_obj = PersonId(person_id_str)
         person = person_repo.find_by_id(person_id_obj)
         roles = [person.role]
     except Exception:
@@ -604,6 +609,71 @@ def deactivate_activity(request: Request) -> Response:
                 'message': 'Activity deactivated successfully (blockchain update pending)',
                 'warning': f'Blockchain update failed: {str(blockchain_error)}'
             }, status=status.HTTP_200_OK)
+        
+    except AuthorizationException as e:
+        return Response({
+            'error': 'AUTHORIZATION_ERROR',
+            'message': str(e)
+        }, status=status.HTTP_403_FORBIDDEN)
+    except ValueError as e:
+        return Response({
+            'error': 'VALIDATION_ERROR',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'error': 'INTERNAL_ERROR',
+            'message': f'An unexpected error occurred: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reactivate_activity(request: Request) -> Response:
+    """
+    Reactivate a deactivated activity (Lead only).
+    
+    Request Body:
+        - activityId: str (UUID)
+    
+    Returns:
+        200: Activity reactivated successfully
+        400: Invalid request data
+        401: Authentication required
+        403: Insufficient permissions
+        404: Activity not found
+    """
+    try:
+        # Get authentication context
+        auth_context = _get_auth_context(request)
+        
+        # Validate input data
+        serializer = DeactivateActivitySerializer(data=request.data)  # Reuse same serializer
+        if not serializer.is_valid():
+            return Response({
+                'error': 'VALIDATION_ERROR',
+                'message': 'Invalid request data',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Extract validated data
+        validated_data = cast(Dict[str, Any], serializer.validated_data)
+        activity_id = ActivityId(validated_data['activityId'])
+        
+        # Use the application service for proper domain logic and permission checks
+        activity_service = _get_activity_service()
+        try:
+            activity_service.reactivate_activity(activity_id, auth_context)
+        except Exception as e:
+            return Response({
+                'error': 'REACTIVATION_ERROR',
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'success': True,
+            'message': 'Activity reactivated successfully'
+        }, status=status.HTTP_200_OK)
         
     except AuthorizationException as e:
         return Response({

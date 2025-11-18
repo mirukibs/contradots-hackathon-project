@@ -9,12 +9,41 @@ from src.application.dtos.activity_details_dto import ActivityDetailsDto
 from src.application.repositories.activity_query_repository import ActivityQueryRepository
 from src.application.security.authentication_context import AuthenticationContext
 from src.application.security.authorization_service import AuthorizationService
+from src.application.security.authorization_exception import AuthorizationException
 from src.domain.activity.activity_repository import ActivityRepository
 from src.domain.person.person_repository import PersonRepository
 from src.domain.activity.activity import Activity, ActivityId
 
 
 class ActivityApplicationService:
+    def reactivate_activity(self, activity_id: ActivityId, context: AuthenticationContext) -> None:
+        """
+        Reactivate a deactivated activity (Lead only).
+        Args:
+            activity_id: The ID of the activity to reactivate
+            context: Authentication context of the requesting user
+        Raises:
+            ValueError: If activity not found or user is not authorized
+            AuthorizationException: If authorization fails
+        """
+        # Check authentication
+        if not context.is_authenticated:
+            raise AuthorizationException("Authentication required to reactivate activity")
+
+        # Get the activity
+        activity = self._activity_repo.find_by_id(activity_id)
+        if not activity:
+            raise ValueError(f"Activity not found: {activity_id}")
+
+        # Enforce activity management permissions
+        self._authorization_service.enforce_activity_ownership(context, activity_id)
+
+        # Only the lead/creator can reactivate
+        if hasattr(activity, 'creator_id'):
+            if activity.creator_id != context.current_user_id:
+                raise AuthorizationException("Only the activity creator can reactivate the activity")
+        # Reactivate in the repository
+        self._activity_repo.reactivate_activity(activity_id)
     """
     Application service that orchestrates activity-related use cases.
     
@@ -76,8 +105,8 @@ class ActivityApplicationService:
             activity_id=activity_id,
             title=command.name,
             description=command.description,
-            creator_id=command.leadId
-            # points=command.points  # TODO: Add points to Activity domain model
+            creator_id=command.leadId,
+            points=command.points
         )
         
         # Save the activity
@@ -98,8 +127,9 @@ class ActivityApplicationService:
         Raises:
             AuthorizationException: If user is not authenticated
         """
-        # Require authentication to view activities
-        self._authorization_service.validate_role_permission(context, "view_activities")
+        # Basic authentication check - anyone can view activities
+        if not context.is_authenticated:
+            raise AuthorizationException("Authentication required to view activities")
         
         # Delegate to query repository for optimized read
         return self._activity_query_repo.get_active_activities()
@@ -119,8 +149,9 @@ class ActivityApplicationService:
             ValueError: If activity not found
             AuthorizationException: If user is not authenticated
         """
-        # Require authentication to view activity details
-        self._authorization_service.validate_role_permission(context, "view_activities")
+        # Basic authentication check - anyone can view activity details
+        if not context.is_authenticated:
+            raise AuthorizationException("Authentication required to view activity details")
         
         # Convert ActivityId to string for query repository
         activity_id_str = str(activity_id)

@@ -41,6 +41,13 @@ urlpatterns = [
         name='deactivate_activity'
     ),
     
+    # Reactivate activity
+    path(
+        'activities/reactivate/',
+        views.reactivate_activity,
+        name='reactivate_activity'
+    ),
+    
     # ==================== Action Endpoints ====================
     
     # Submit new action

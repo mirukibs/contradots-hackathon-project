@@ -1,0 +1,288 @@
+/* Pending Validations Page Styles */
+.pending-validations-page {
+  padding: 100px 20px 80px;
+  width: 100dvw;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, rgba(10,10,12,0.6), rgba(5,5,7,0.8));
+  color: var(--fg);
+}
+
+.pending-validations-page h2 {
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 2rem;
+  color: var(--fg);
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 32px;
+  font-size: 1.1rem;
+}
+
+.loading {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.1rem;
+  margin-top: 40px;
+}
+
+.empty-state {
+  text-align: center;
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--card);
+  border-radius: 16px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.empty-state h3 {
+  margin-bottom: 16px;
+  color: var(--fg);
+}
+
+.empty-state p {
+  margin-bottom: 24px;
+  color: var(--muted);
+}
+
+.validations-list {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.validation-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: var(--accent-glow);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.validation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(106,57,255,0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.action-info h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: var(--fg);
+}
+
+.submitter {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.submitter strong {
+  color: var(--cta);
+}
+
+.submitted-date {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status.submitted {
+  background: #f6c85f;
+  color: #2d1400;
+}
+
+.description {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.description h4 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--fg);
+}
+
+.description p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.validation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.approve-btn, .reject-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.approve-btn {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2);
+}
+
+.approve-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
+}
+
+.approve-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.1);
+}
+
+.reject-btn {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+.reject-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+}
+
+.reject-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);
+}
+
+/* Validation Modal Styles */
+.validation-summary {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.validation-summary p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.validation-summary strong {
+  color: var(--fg);
+}
+
+.validation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.validation-form label {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.validation-form textarea {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.validation-form textarea:focus {
+  border-color: var(--cta);
+  box-shadow: 0 0 0 2px rgba(106, 57, 255, 0.1);
+}
+
+.primary.approve {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.primary.reject {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.error-banner {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 20px;
+  padding: 16px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  text-align: center;
+}
+
+.error-banner p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pending-validations-page {
+    padding: 80px 16px 60px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .validation-actions {
+    flex-direction: column;
+  }
+  
+  .approve-btn, .reject-btn {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .glass-modal {
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+}
