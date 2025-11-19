@@ -72,31 +72,19 @@ class ReputationEventHandler(EventHandler[DomainEvent]):
     
     def _handle_proof_validated(self, event: ProofValidatedEvent) -> None:
         """
-        Handle ProofValidatedEvent - update person reputation if proof is valid.
-        
-        Args:
-            event: The proof validated event
-            
-        Raises:
-            ValueError: If person or activity not found
-            RuntimeError: If reputation update fails
+        Handle ProofValidatedEvent - recalculate and update person reputation if proof is valid.
         """
         if not event.is_valid:
-            # No reputation change for invalid proofs
             return
-        
-        # Get the person and activity
         person = self._person_repo.find_by_id(event.person_id)
         if not person:
             raise ValueError(f"Person not found: {event.person_id}")
-        
-        activity = self._activity_repo.find_by_id(event.activity_id)
-        if not activity:
-            raise ValueError(f"Activity not found: {event.activity_id}")
-        
-        # Use the actual activity's points for reputation, with role modifier
-        from src.domain.person.role import Role
-        role_modifier = 1.2 if person.role == Role.LEAD else 1.0
-        points_to_add = int(activity.points * role_modifier)
-        person.update_reputation(points_to_add)
+        # Get all verified actions for this person
+        from src.domain.services.reputation_service import ReputationService
+        from src.infrastructure.persistence.django_repositories import DjangoActionRepository
+        action_repo = DjangoActionRepository()
+        verified_actions = action_repo.find_verified_by_person_id(event.person_id)
+        reputation_service = ReputationService()
+        new_score = reputation_service.calculate_person_reputation(person, verified_actions)
+        person._reputation_score = new_score
         self._person_repo.save(person)
