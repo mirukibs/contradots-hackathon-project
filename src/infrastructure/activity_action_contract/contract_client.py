@@ -200,13 +200,19 @@ class ActivityActionTrackerClient:
             person_id: ID of the person submitting the action
             activity_id: ID of the activity
             description: Description of the action
-            proof_hash: Hash of the proof
+            proof_hash: Hash of the proof (hex string with 0x prefix)
             
         Returns:
             Tuple of (action_id, transaction_receipt)
         """
         description_bytes = self._string_to_bytes32(description)
-        proof_hash_bytes = self._string_to_bytes32(proof_hash)
+        # Convert hex string to bytes32
+        if proof_hash.startswith('0x'):
+            # Remove 0x prefix and convert hex to bytes, then pad to 32 bytes
+            proof_hash_bytes = bytes.fromhex(proof_hash[2:]).ljust(32, b'\0')[:32]
+        else:
+            # Fallback to string encoding if not a hex string
+            proof_hash_bytes = self._string_to_bytes32(proof_hash)
         
         function_call = self.contract.functions.submitAction(
             person_id,

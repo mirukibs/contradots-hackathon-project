@@ -519,29 +519,35 @@ def get_activity_details(request: Request, activity_id: str) -> Response:
         activity_details = activity_service.get_activity_details(activity_id_obj, auth_context)
         
         # Enrich with blockchain data
+        activity_dict = activity_details.to_dict()
         try:
             contract_client = _get_contract_client()
             activity_id_int = _uuid_to_int(activity_id_obj)
             
             blockchain_activity = contract_client.get_activity(activity_id_int)
             
+            # Safely convert blockchain data, handling invalid UUIDs
+            try:
+                lead_uuid_str = str(int_to_uuid(blockchain_activity.lead_id))
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not convert blockchain lead_id to UUID: {e}")
+                lead_uuid_str = "invalid"
+            
             # Add blockchain data to response
-            activity_dict = activity_details.to_dict()
             activity_dict['blockchain'] = {
                 'name': contract_client._bytes32_to_string(blockchain_activity.name),
                 'description': contract_client._bytes32_to_string(blockchain_activity.description),
                 'points': blockchain_activity.points,
                 'isActive': blockchain_activity.is_active,
-                'leadId': str(int_to_uuid(blockchain_activity.lead_id))
+                'leadId': lead_uuid_str
             }
             
-            return Response(activity_dict, status=status.HTTP_200_OK)
-            
         except Exception as blockchain_error:
-            # Return DB data if blockchain query fails
-            activity_dict = activity_details.to_dict()
+            # Continue with DB data if blockchain query fails
+            logger.warning(f'Blockchain data unavailable for activity {activity_id}: {str(blockchain_error)}')
             activity_dict['warning'] = f'Blockchain data unavailable: {str(blockchain_error)}'
-            return Response(activity_dict, status=status.HTTP_200_OK)
+        
+        return Response(activity_dict, status=status.HTTP_200_OK)
         
     except AuthorizationException as e:
         return Response({
@@ -764,12 +770,42 @@ def submit_action(request: Request) -> Response:
             person_id_int = _uuid_to_int(auth_context.current_user_id)
             activity_id_int = _uuid_to_int(ActivityId(validated_data['activityId']))
             
-            blockchain_action_id, tx_receipt = asyncio.run(contract_client.submit_action(
-                person_id=person_id_int,
-                activity_id=activity_id_int,
-                description=validated_data['description'],
-                proof_hash=validated_data['proofHash']
-            ))
+            logger.info(f"Submitting action to blockchain: person_id={person_id_int}, activity_id={activity_id_int}")
+            logger.info(f"Description: {validated_data['description']}, ProofHash: {validated_data['proofHash']}")
+            
+            # Use asyncio.run() carefully - ensure no existing event loop
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is already running, create a new one
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run,
+                            contract_client.submit_action(
+                                person_id=person_id_int,
+                                activity_id=activity_id_int,
+                                description=validated_data['description'],
+                                proof_hash=validated_data['proofHash']
+                            )
+                        )
+                        blockchain_action_id, tx_receipt = future.result(timeout=60)
+                else:
+                    blockchain_action_id, tx_receipt = asyncio.run(contract_client.submit_action(
+                        person_id=person_id_int,
+                        activity_id=activity_id_int,
+                        description=validated_data['description'],
+                        proof_hash=validated_data['proofHash']
+                    ))
+            except RuntimeError as e:
+                # No event loop exists, safe to use asyncio.run()
+                logger.info("No existing event loop, creating new one")
+                blockchain_action_id, tx_receipt = asyncio.run(contract_client.submit_action(
+                    person_id=person_id_int,
+                    activity_id=activity_id_int,
+                    description=validated_data['description'],
+                    proof_hash=validated_data['proofHash']
+                ))
             
             return Response({
                 'message': 'Action submitted successfully',
@@ -779,6 +815,7 @@ def submit_action(request: Request) -> Response:
             }, status=status.HTTP_201_CREATED)
         except Exception as blockchain_error:
             # Action submitted to DB but blockchain failed
+            logger.error(f'Blockchain submission failed: {str(blockchain_error)}', exc_info=True)
             return Response({
                 'message': 'Action submitted successfully (blockchain storage pending)',
                 'actionId': str(action_id),

@@ -46,12 +46,12 @@ class DjangoActivityQueryRepository(ActivityQueryRepository):
         
         return [self._to_activity_dto(activity) for activity in activities]
     
-    def get_activity_details(self, activity_id: str) -> ActivityDetailsDto:
+    def get_activity_details(self, activity_id) -> ActivityDetailsDto:
         """
         Get detailed information for a specific activity including statistics.
         
         Args:
-            activity_id: The ID of the activity to get details for (as string)
+            activity_id: The ID of the activity to get details for (ActivityId or string)
             
         Returns:
             ActivityDetailsDto with comprehensive activity information
@@ -59,10 +59,13 @@ class DjangoActivityQueryRepository(ActivityQueryRepository):
         Raises:
             ValueError: If activity not found
         """
+        # Convert ActivityId to string if needed
+        activity_id_str = str(activity_id)
+        
         try:
             activity = Activity.objects.select_related(
                 'lead_person__user'
-            ).get(activity_id=activity_id)
+            ).get(activity_id=activity_id_str)
             
             # Get action statistics using direct query
             from ..django_app.models import Action
