@@ -192,7 +192,7 @@ export default function PendingValidations() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleValidateAction(
-                    validatingAction.actionId, 
+                    validatingAction.blockchainActionId, 
                     validatingAction.type === 'approve'
                   );
                 }}

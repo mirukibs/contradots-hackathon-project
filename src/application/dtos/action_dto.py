@@ -1,7 +1,7 @@
 """ActionDto - Data transfer object for action information"""
 
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,7 @@ class ActionDto:
         description: Description of the action taken
         status: Current status of the action (pending, validated, rejected)
         submittedAt: When the action was submitted (as ISO string)
+        blockchainActionId: Blockchain action ID if available
     """
     actionId: str
     personName: str
@@ -26,6 +27,7 @@ class ActionDto:
     description: str
     status: str
     submittedAt: str
+    blockchainActionId: Optional[int] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -34,7 +36,7 @@ class ActionDto:
         Returns:
             Dictionary representation of the action
         """
-        return {
+        result = {
             'actionId': self.actionId,
             'personName': self.personName,
             'activityName': self.activityName,
@@ -42,3 +44,6 @@ class ActionDto:
             'status': self.status,
             'submittedAt': self.submittedAt
         }
+        if self.blockchainActionId is not None:
+            result['blockchainActionId'] = self.blockchainActionId
+        return result

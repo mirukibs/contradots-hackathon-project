@@ -795,6 +795,24 @@ def submit_action(request: Request) -> Response:
                     proof_hash=validated_data['proofHash']
                 ))
             
+            # Update the action with blockchain_action_id
+            action_repo = DjangoActionRepository()
+            action = action_repo.find_by_id(ActionId(str(action_id)))
+            if action:
+                # Update blockchain_action_id
+                from ....domain.action.action import Action as DomainAction
+                updated_action = DomainAction(
+                    action_id=action.action_id,
+                    person_id=action.person_id,
+                    activity_id=action.activity_id,
+                    proof=action.proof,
+                    status=action.status,
+                    submitted_at=action.submitted_at,
+                    verified_at=action.verified_at,
+                    blockchain_action_id=blockchain_action_id
+                )
+                action_repo.save(updated_action)
+            
             return Response({
                 'message': 'Action submitted successfully',
                 'actionId': str(action_id),
@@ -957,10 +975,41 @@ def validate_proof(request: Request) -> Response:
         
         # Extract validated data
         validated_data = cast(Dict[str, Any], serializer.validated_data)
+        action_id_value = validated_data['actionId']
         
-        # Create command
+        # Check if it's a blockchain action ID (integer) or UUID
+        action_id_obj = None
+        blockchain_id_for_contract = None
+        
+        if action_id_value.isdigit():
+            # It's a blockchain action ID - look up the action by blockchain_action_id
+            from ....infrastructure.django_app.models import Action as ActionModel
+            try:
+                action_model = ActionModel.objects.get(blockchain_action_id=int(action_id_value))
+                action_id_obj = ActionId(str(action_model.action_id))
+                blockchain_id_for_contract = int(action_id_value)
+            except ActionModel.DoesNotExist:
+                return Response({
+                    'error': 'NOT_FOUND',
+                    'message': f'Action with blockchain ID {action_id_value} not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # It's a UUID
+            action_id_obj = ActionId(action_id_value)
+            # Look up blockchain_action_id for contract call
+            from ....infrastructure.django_app.models import Action as ActionModel
+            try:
+                action_model = ActionModel.objects.get(action_id=action_id_value)
+                blockchain_id_for_contract = action_model.blockchain_action_id
+            except ActionModel.DoesNotExist:
+                return Response({
+                    'error': 'NOT_FOUND',
+                    'message': f'Action with ID {action_id_value} not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Create command with UUID
         command = ValidateProofCommand(
-            actionId=ActionId(validated_data['actionId']),
+            actionId=action_id_obj,
             isValid=validated_data['isValid']
         )
         
@@ -971,7 +1020,11 @@ def validate_proof(request: Request) -> Response:
         # Validate proof on blockchain
         try:
             contract_client = _get_contract_client()
-            action_id_int = _uuid_to_int(ActionId(validated_data['actionId']))
+            # Use the blockchain_action_id if available
+            if blockchain_id_for_contract:
+                action_id_int = blockchain_id_for_contract
+            else:
+                action_id_int = _uuid_to_int(action_id_obj)
             
             tx_receipt = asyncio.run(contract_client.validate_proof(
                 action_id=action_id_int,

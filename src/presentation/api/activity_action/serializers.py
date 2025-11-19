@@ -189,15 +189,23 @@ class ValidateProofSerializer(serializers.Serializer):
     )
     
     def validate_actionId(self, value: str) -> str:
-        """Validate action ID format (UUID)."""
+        """Validate action ID format (UUID or integer for blockchain ID)."""
         import uuid
+        
+        # Try to parse as integer first (blockchain action ID)
+        if isinstance(value, int) or (isinstance(value, str) and value.isdigit()):
+            # It's a blockchain action ID (integer), return as string
+            return str(value)
+        
+        # Try to parse as UUID
         try:
             uuid.UUID(value)
+            return value
         except ValueError:
             raise serializers.ValidationError(
-                "Action ID must be a valid UUID"
+                "Action ID must be a valid UUID or integer (blockchain action ID)"
             )
-        return value
+
     
     def validate_validatorComment(self, value: str) -> str:
         """Validate validator comment."""

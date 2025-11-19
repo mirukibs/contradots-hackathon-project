@@ -475,7 +475,8 @@ class DjangoActionRepository(ActionRepository):
             proof=model.proof_hash,  # Map proof_hash to proof
             status=ActionStatus(model.status),
             submitted_at=model.submitted_at,
-            verified_at=model.validated_at
+            verified_at=model.validated_at,
+            blockchain_action_id=model.blockchain_action_id
         )
     
     def _create_model_from_action(self, action: DomainAction) -> ActionModel:
@@ -493,7 +494,8 @@ class DjangoActionRepository(ActionRepository):
             activity=activity_model,
             description=f"Action for {activity_model.name}",  # Default description
             proof_hash=proof_hash,  # Map proof to proof_hash
-            status=action.status.value
+            status=action.status.value,
+            blockchain_action_id=action.blockchain_action_id
         )
         
         return model
@@ -507,6 +509,7 @@ class DjangoActionRepository(ActionRepository):
             raise ValueError(f"Attempted to save malformed proof_hash: '{proof_hash}' (len={len(proof_hash) if isinstance(proof_hash, str) else 'N/A'})")
         model.proof_hash = proof_hash
         model.status = action.status.value.upper()
+        model.blockchain_action_id = action.blockchain_action_id
         
         # Update validation fields if action is validated
         if action.status == ActionStatus.VALIDATED and action.verified_at:

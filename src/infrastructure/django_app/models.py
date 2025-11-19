@@ -219,6 +219,12 @@ class Action(models.Model):
         help_text="Blockchain proof hash"
     )
     
+    blockchain_action_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        help_text="Action ID from the blockchain contract"
+    )
+    
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
@@ -258,6 +264,7 @@ class Action(models.Model):
             models.Index(fields=['person']),
             models.Index(fields=['activity']),
             models.Index(fields=['submitted_at']),
+            models.Index(fields=['blockchain_action_id']),
         ]
     
     def clean(self):

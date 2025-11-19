@@ -29,7 +29,8 @@ class Action:
         proof: str,
         status: ActionStatus = ActionStatus.SUBMITTED,
         submitted_at: Optional[datetime] = None,
-        verified_at: Optional[datetime] = None
+        verified_at: Optional[datetime] = None,
+        blockchain_action_id: Optional[int] = None
     ):
         """
         Initialize an Action aggregate.
@@ -42,6 +43,7 @@ class Action:
             status: Current status of the action (default: SUBMITTED)
             submitted_at: Timestamp when action was submitted (default: now)
             verified_at: Timestamp when action was verified (default: None)
+            blockchain_action_id: ID from blockchain contract (optional)
         """
         self._action_id = action_id
         self._person_id = person_id
@@ -50,6 +52,7 @@ class Action:
         self._status = status
         self._submitted_at = submitted_at or datetime.now(timezone.utc)
         self._verified_at = verified_at
+        self._blockchain_action_id = blockchain_action_id
         self._domain_events: List[DomainEvent] = []
     
     @property
@@ -76,6 +79,11 @@ class Action:
     def status(self) -> ActionStatus:
         """Get the current status of the action."""
         return self._status
+    
+    @property
+    def blockchain_action_id(self) -> Optional[int]:
+        """Get the blockchain action ID if available."""
+        return self._blockchain_action_id
     
     @property
     def submitted_at(self) -> datetime:

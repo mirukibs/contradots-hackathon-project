@@ -166,7 +166,8 @@ class DjangoActionQueryRepository(ActionQueryRepository):
             activityName=action.activity.name,
             description=action.description,
             status=action.status,
-            submittedAt=action.submitted_at.isoformat()
+            submittedAt=action.submitted_at.isoformat(),
+            blockchainActionId=action.blockchain_action_id
         )
 
 
