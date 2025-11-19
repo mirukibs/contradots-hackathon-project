@@ -42,7 +42,8 @@ class ActionDto:
             'activityName': self.activityName,
             'description': self.description,
             'status': self.status,
-            'submittedAt': self.submittedAt
+            'submittedAt': self.submittedAt,
+            'blockchainActionId': None
         }
         if self.blockchainActionId is not None:
             result['blockchainActionId'] = self.blockchainActionId
