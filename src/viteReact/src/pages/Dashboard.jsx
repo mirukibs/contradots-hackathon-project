@@ -90,9 +90,9 @@ export default function Dashboard() {
             <Link to="/activities#submit">
               <button className="outline">Submit Action</button>
             </Link>
-            <Link to="/leaderboard">
+            {/* <Link to="/leaderboard">
               <button className="outline">Leaderboard</button>
-            </Link>
+            </Link> */}
             {profile?.role?.toLowerCase() === 'lead' && (
               <Link to="/pending-validations">
                 <button className="outline">Validate Actions</button>

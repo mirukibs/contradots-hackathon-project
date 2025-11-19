@@ -38,6 +38,7 @@ class DjangoAuthorizationService(BaseAuthorizationService):
                 'view_leaderboard', 
                 'create_activity',
                 'validate_action',
+                'validate_proof',  # Add this line for compatibility
                 'view_all_actions',
                 'manage_activities'
             },

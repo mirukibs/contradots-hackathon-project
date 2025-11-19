@@ -279,9 +279,18 @@ class SimpleEventPublisher(EventPublisher):
         self._handlers = []
     
     def publish(self, event: DomainEvent) -> None:
-        """Publish a single domain event."""
-        # For now, just log the event - can be enhanced later
+        """Publish a single domain event and call handlers."""
         logger.info(f"Publishing event: {type(event).__name__}")
+        # Patch: Call reputation event handler if event is ProofValidatedEvent or ActionSubmittedEvent
+        from ....application.handlers.reputation_event_handler import ReputationEventHandler
+        from ....infrastructure.persistence.django_repositories import DjangoPersonRepository, DjangoActivityRepository
+        from ....domain.services.reputation_service import ReputationService
+        person_repo = DjangoPersonRepository()
+        activity_repo = DjangoActivityRepository()
+        reputation_service = ReputationService()
+        handler = ReputationEventHandler(person_repo, activity_repo, reputation_service)
+        if handler.can_handle(event):
+            handler.handle(event)
     
     def publish_all(self, events: List[DomainEvent]) -> None:
         """Publish multiple domain events."""

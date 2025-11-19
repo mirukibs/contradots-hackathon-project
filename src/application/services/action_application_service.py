@@ -141,35 +141,37 @@ class ActionApplicationService:
     
     def simulate_proof_validation(self, command: ValidateProofCommand, context: AuthenticationContext) -> None:
         """
-        Simulate proof validation (for demo purposes).
+        Validate proof for an action, persist the result, and publish event.
         
         Args:
             command: The proof validation command
             context: Authentication context of the requesting user
-            
         Raises:
             ValueError: If command validation fails or action not found
             AuthorizationException: If user does not have validate_proof permission
         """
         # Only LEADs can validate proofs
         self._authorization_service.validate_role_permission(context, "validate_proof")
-        
-        # Validate command
         command.validate()
-        
-        # Get the action
         action = self._action_repo.find_by_id(command.actionId)
         if not action:
             raise ValueError(f"Action not found: {command.actionId}")
-        
-        # In a real implementation, this would update the action's validation status
-        # For now, we'll just publish the validation event
-        
-        # Publish ProofValidatedEvent
-        event = ProofValidatedEvent(
-            action_id=action.action_id,
-            person_id=action.person_id,
-            activity_id=action.activity_id,
-            is_valid=command.isValid
-        )
-        self._event_publisher.publish(event)
+
+        # Only update and publish event if validation is positive
+        if command.isValid:
+            # Mark as validated and set timestamp
+            action.validate_proof()
+            self._action_repo.save(action)
+            # Publish event (will trigger reputation update)
+            for event in getattr(action, 'domain_events', []):
+                self._event_publisher.publish(event)
+            action.clear_domain_events()
+        else:
+            # For invalid, just publish event with is_valid=False
+            event = ProofValidatedEvent(
+                action_id=action.action_id,
+                person_id=action.person_id,
+                activity_id=action.activity_id,
+                is_valid=False
+            )
+            self._event_publisher.publish(event)
