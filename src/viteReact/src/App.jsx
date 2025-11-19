@@ -6,7 +6,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
-import Leaderboard from "./pages/Leaderboard";
+
 import PendingValidations from "./pages/PendingValidations";
 import ActivityDetails from "./pages/ActivityDetails";
 
@@ -24,7 +24,6 @@ export default function App() {
   <Route path="/dashboard" element={<Dashboard />} />
   <Route path="/activities" element={<Activities />} />
   <Route path="/activity/:activityId" element={<ActivityDetails />} />
-  <Route path="/leaderboard" element={<Leaderboard />} />
   <Route path="/pending-validations" element={<PendingValidations />} />
 
       </Routes>
