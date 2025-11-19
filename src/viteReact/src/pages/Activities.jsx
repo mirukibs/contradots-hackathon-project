@@ -590,19 +590,7 @@ function EditActivityForm({ activity, onSave, onCancel }) {
       <label>Description</label>
       <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
-      <div className="row">
-        <div style={{ flex: 1 }}>
-          <label>Points</label>
-          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
-        </div>
-      </div>
-
-      {err && <div className="form-error">{err}</div>}
-
-      <div className="modal-actions">
-        <button type="button" onClick={onCancel}>Cancel</button>
-        <button type="submit" className="primary">Save Changes</button>
-      </div>
+      {/* Proof Hash input removed: proof hash is auto-generated and sent in submit logic */}
     </form>
   );
 }
@@ -660,13 +648,7 @@ function SubmitActionForm({ activity, onSubmit, onCancel, busy, fileRef }) {
       <label>Upload Proof (optional)</label>
       <input type="file" ref={fileRef} onChange={onFileChange} accept=".jpg,.jpeg,.png,.pdf" />
 
-      <label>Or enter proof hash (32, 40, 64, or 128 hex characters)</label>
-      <input 
-        value={proofHash} 
-        onChange={(e) => setProofHash(e.target.value)} 
-        placeholder="0xabc123..." 
-        pattern="^(0x)?[a-fA-F0-9]{32}$|^(0x)?[a-fA-F0-9]{40}$|^(0x)?[a-fA-F0-9]{64}$|^(0x)?[a-fA-F0-9]{128}$"
-      />
+      {/* Proof hash input removed: proof hash is auto-generated and sent in submit logic */}
 
       {err && <div className="form-error">{err}</div>}
 
