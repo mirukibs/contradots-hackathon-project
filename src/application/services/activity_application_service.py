@@ -106,7 +106,7 @@ class ActivityApplicationService:
             title=command.name,
             description=command.description,
             creator_id=command.leadId,
-            points=command.points
+            points=10  # Fixed value for all activities
         )
         
         # Save the activity

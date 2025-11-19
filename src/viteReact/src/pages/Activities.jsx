@@ -526,7 +526,7 @@ function Modal({ title, children, onClose }) {
    CreateActivityForm
    --------------------------- */
 function CreateActivityForm({ onCreate, onCancel }) {
-  const [form, setForm] = useState({ name: "", description: "", points: "" });
+  const [form, setForm] = useState({ name: "", description: "" });
   const [err, setErr] = useState(null);
 
   const submit = (e) => {
@@ -539,9 +539,6 @@ function CreateActivityForm({ onCreate, onCancel }) {
     if (!form.description || form.description.length > 256) {
       return setErr("Description required (1-256 chars)");
     }
-    if (!form.points || Number(form.points) < 1 || Number(form.points) > 1000) {
-      return setErr("Points required (1-1000)");
-    }
 
     onCreate(form);
   };
@@ -553,13 +550,6 @@ function CreateActivityForm({ onCreate, onCancel }) {
 
       <label>Description</label>
       <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short description" />
-
-      <div className="row">
-        <div style={{ flex: 1 }}>
-          <label>Points</label>
-          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
-        </div>
-      </div>
 
       {err && <div className="form-error">{err}</div>}
 

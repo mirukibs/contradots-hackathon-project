@@ -27,11 +27,6 @@ class CreateActivitySerializer(serializers.Serializer):
         help_text="Description of the activity (10-1000 characters)"
     )
     
-    points = serializers.IntegerField(
-        min_value=1,
-        max_value=1000,
-        help_text="Points awarded for completing the activity (1-1000)"
-    )
     
     def validate_name(self, value: str) -> str:
         """Validate activity name format and constraints."""

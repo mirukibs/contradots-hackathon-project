@@ -383,46 +383,34 @@ def create_activity(request: Request) -> Response:
         
         # Extract validated data
         validated_data = cast(Dict[str, Any], serializer.validated_data)
-        
-        # First, create activity on blockchain to get the blockchain_activity_id
+        FIXED_POINTS = 10
         try:
             contract_client = _get_contract_client()
             lead_id_int = _uuid_to_int(auth_context.current_user_id)
-            
-            # Create activity on blockchain
             blockchain_activity_id, tx_receipt = asyncio.run(contract_client.create_activity(
                 name=validated_data['name'],
                 description=validated_data['description'],
                 lead_id=lead_id_int,
-                points=validated_data['points']
+                points=FIXED_POINTS
             ))
-            
-            # Convert blockchain_activity_id (int) to UUID for use as database activity_id
             activity_uuid = int_to_uuid(blockchain_activity_id)
             activity_id_obj = ActivityId(activity_uuid)
-            
-            # Create command with the blockchain-generated activity ID
             command = CreateActivityCommand(
                 name=validated_data['name'],
                 description=validated_data['description'],
-                points=validated_data['points'],
+                points=FIXED_POINTS,
                 leadId=auth_context.current_user_id,
                 activityId=activity_id_obj
             )
-            
-            # Execute through command handler service
             command_service = _get_command_handler_service()
             activity_id = command_service.handle_create_activity(command, auth_context)
-            
             return Response({
                 'message': 'Activity created successfully',
                 'activityId': str(activity_id.value),
                 'blockchainActivityId': blockchain_activity_id,
                 'transactionHash': tx_receipt.get('transactionHash', '').hex() if tx_receipt.get('transactionHash') else None
             }, status=status.HTTP_201_CREATED)
-            
         except Exception as e:
-            # If blockchain creation fails, we don't create in DB
             return Response({
                 'error': 'BLOCKCHAIN_ERROR',
                 'message': f'Failed to create activity on blockchain: {str(e)}'
