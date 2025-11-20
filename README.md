@@ -1,6 +1,8 @@
+![Home Screen](homescreen_screenshot.png "Credora")
+
 # ContraDots Hackathon Project - Social Scoring System
 
-A blockchain-integrated social scoring system built with Django (backend), React (frontend), and Ethereum smart contracts.
+A blockchain-integrated social scoring system built with Django (backend), React (frontend), and Ethereum smart contracts deployed on polkadot chains.
 
 ## 🚀 Quick Start
 

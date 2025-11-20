@@ -2,9 +2,9 @@ name: Domain Model Adherence CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main*, develop* ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop* ]
   workflow_dispatch:
 
 env:
