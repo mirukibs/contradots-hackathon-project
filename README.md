@@ -230,7 +230,7 @@ npm install
 
 ## 📄 License
 
-This project is part of the ContraDots Hackathon.
+This project is part of the Polkadot Hackathon.
 
 ## 🔗 Links
 
