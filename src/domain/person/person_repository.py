@@ -31,6 +31,24 @@ class PersonRepository(ABC):
         pass
     
     @abstractmethod
+    def find_by_email(self, email: str) -> 'Person':
+        """
+        Find a Person by their email address.
+        
+        Used for authentication - allows looking up users by their login email.
+        
+        Args:
+            email: The email address to search for
+            
+        Returns:
+            The Person with the given email
+            
+        Raises:
+            PersonNotFoundError: If no Person exists with the given email
+        """
+        pass
+    
+    @abstractmethod
     def save(self, person: 'Person') -> None:
         """
         Save a Person aggregate to persistent storage.

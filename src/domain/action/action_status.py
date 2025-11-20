@@ -16,9 +16,9 @@ class ActionStatus(str, Enum):
     - REJECTED: State after proof validation fails
     """
     
-    SUBMITTED = "submitted"
-    VALIDATED = "validated"
-    REJECTED = "rejected"
+    SUBMITTED = "SUBMITTED"
+    VALIDATED = "VALIDATED"
+    REJECTED = "REJECTED"
     
     def __str__(self) -> str:
         return self.value

@@ -1,0 +1,231 @@
+.dashboard {
+  padding: 80px 32px 32px;  /* Add top padding for fixed header */
+  overflow-y: auto;
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  background-color: var(--bg);
+}
+
+.dashboard .glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--cta) 0%, rgba(63,210,255,0) 60%);
+  filter: blur(120px);
+  bottom: -200px;
+  right: -200px;
+  animation: glowMove 5s infinite alternate;
+}
+
+@keyframes glowMove {
+  0% { transform: translate(-10px, 0) scale(1); }
+  100% { transform: translate(10px, 20px) scale(1.1); }
+}
+
+.hero-card {
+  background: var(--card);
+  padding: 30px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-card h1 {
+  font-size: 2.6rem;
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+.score-box {
+  background: var(--bgl);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.score-box h3 {
+  color: var(--fg);
+  opacity: .8;
+}
+
+.score-box .score {
+  font-size: 3.4rem;
+  margin-top: 10px;
+  font-weight: bold;
+  color: var(--cta);
+}
+
+.quick-actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.quick-actions button {
+  background: var(--cta);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  transition: .3s;
+}
+
+.quick-actions button:hover {
+  background: var(--cta-h);
+  transform: translateY(-4px);
+}
+
+.quick-actions .outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--cta);
+  color: var(--cta);
+}
+
+.recent-actions {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.recent-actions h2 {
+  margin-bottom: 24px;
+  color: var(--fg);
+  text-align: center;
+}
+
+.action-item {
+  padding: 20px;
+  background: var(--card);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border-left: 4px solid var(--cta);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.action-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.action-item b {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+
+.action-item p {
+  color: var(--muted);
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.action-item .timestamp {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.action-item span {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.action-item .validated {
+  background: #1f7a18;
+  color: white;
+}
+
+.action-item .submitted {
+  background: #705300;
+  color: white;
+}
+
+.action-item .rejected {
+  background: #7a1a18;
+  color: white;
+}
+
+/* Legacy status support */
+.action-item .approved {
+  background: #1f7a18;
+  color: white;
+}
+
+.action-item .pending {
+  background: #705300;
+  color: white;
+}
+
+.empty {
+  opacity: .6;
+  font-style: italic;
+}
+
+.error-banner {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 20px;
+  padding: 16px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  text-align: center;
+}
+
+.error-banner p {
+  margin: 0;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 80px 16px 32px;
+    gap: 24px;
+  }
+  
+  .hero-card {
+    padding: 20px;
+  }
+  
+  .action-item {
+    padding: 16px;
+  }
+  
+  .action-item .timestamp {
+    position: static;
+    margin-top: 8px;
+    display: block;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .quick-actions button {
+    width: 100%;
+  }
+}

@@ -66,3 +66,13 @@ class ActivityRepository(ABC):
             List of all active activities
         """
         pass
+    
+    @abstractmethod
+    def reactivate_activity(self, activity_id: ActivityId) -> None:
+        """
+        Reactivate a deactivated activity.
+        
+        Args:
+            activity_id: The unique identifier of the activity to reactivate
+        """
+        pass

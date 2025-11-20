@@ -97,29 +97,27 @@ class TestReputationService:
     def test_calculate_activity_score_no_actions(self):
         """Test activity score calculation with no actions."""
         service = ReputationService()
-        
         activity = Activity(
             activity_id=ActivityId.generate(),
             title="Test Activity",
             description="Test description",
-            creator_id=PersonId.generate()
+            creator_id=PersonId.generate(),
+            points=10
         )
-        
         score = service.calculate_activity_score(activity, [])
         assert score == 0
     
     def test_calculate_activity_score_with_mixed_actions(self):
         """Test activity score calculation with mixed action statuses."""
         service = ReputationService()
-        
         activity_id = ActivityId.generate()
         activity = Activity(
             activity_id=activity_id,
             title="Test Activity",
             description="Test description",
-            creator_id=PersonId.generate()
+            creator_id=PersonId.generate(),
+            points=10
         )
-        
         # Create actions with different statuses
         all_actions = [
             Action(

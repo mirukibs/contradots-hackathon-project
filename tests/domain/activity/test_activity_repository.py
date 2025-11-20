@@ -11,6 +11,9 @@ from src.domain.shared.value_objects.person_id import PersonId
 
 # Concrete implementation for testing
 class ConcreteActivityRepository(ActivityRepository):
+    def reactivate_activity(self, activity_id):
+        # Stub for test compliance
+        pass
     """Concrete implementation of ActivityRepository for testing."""
     
     def __init__(self) -> None:

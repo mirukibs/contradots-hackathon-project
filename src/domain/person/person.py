@@ -2,11 +2,14 @@
 Person aggregate root for the Social Scoring System.
 Represents a person in the community with role-based permissions and reputation.
 """
-from typing import List, Any, Optional
+from typing import List, Any, Optional, TYPE_CHECKING
 
 from ..shared.value_objects.person_id import PersonId
 from ..shared.domain_events import DomainEvent
 from .role import Role
+
+if TYPE_CHECKING:
+    from ..shared.value_objects.activity_id import ActivityId
 
 
 class Person:
@@ -106,6 +109,91 @@ class Person:
             True if person can create activities, False otherwise
         """
         return self._role == Role.LEAD
+    
+    def can_authenticate_with_email(self, email: str) -> bool:
+        """
+        Check if this person can be authenticated with the given email.
+        
+        Domain authentication validation - checks if the provided email
+        matches this person's registered email.
+        
+        Args:
+            email: The email address to validate for authentication
+            
+        Returns:
+            True if this person can authenticate with the given email
+        """
+        if not email or not email.strip():
+            return False
+        return self._email.lower() == email.strip().lower()
+    
+    def has_permission_for(self, operation: str) -> bool:
+        """
+        Check if this person has permission for a specific operation.
+        
+        Role-based authorization at the domain level.
+        
+        Args:
+            operation: The operation to check permission for
+            
+        Returns:
+            True if person has permission for the operation
+        """
+        if not operation:
+            return False
+            
+        operation = operation.lower()
+        
+        # Lead permissions include all member permissions
+        if self._role == Role.LEAD:
+            return operation in {
+                'create_activity', 'manage_activity', 'deactivate_activity',
+                'submit_action', 'validate_proof', 'view_activities', 
+                'view_leaderboard', 'view_profile'
+            }
+        
+        # Member permissions
+        if self._role == Role.MEMBER:
+            return operation in {
+                'submit_action', 'view_activities', 'view_leaderboard', 'view_profile'
+            }
+        
+        return False
+    
+    def can_manage_activity(self, activity_id: 'ActivityId | None') -> bool:
+        """
+        Check if this person can manage a specific activity.
+        
+        Business rule: Only LEADs can manage activities, and typically
+        only the LEAD who created the activity.
+        
+        Args:
+            activity_id: The activity to check management permissions for
+            
+        Returns:
+            True if person can manage the activity
+        """
+        # Cannot manage a None activity
+        if activity_id is None:
+            return False
+            
+        # For now, any LEAD can manage any activity
+        # In a more sophisticated system, this would check ownership
+        return self._role == Role.LEAD
+    
+    def can_submit_action_as(self, person_id: PersonId) -> bool:
+        """
+        Check if this person can submit actions on behalf of another person.
+        
+        Business rule: People can only submit actions for themselves.
+        
+        Args:
+            person_id: The PersonId to check if actions can be submitted for
+            
+        Returns:
+            True if person can submit actions for the given PersonId
+        """
+        return self._person_id == person_id
     
     def get_uncommitted_events(self) -> List[DomainEvent]:
         """

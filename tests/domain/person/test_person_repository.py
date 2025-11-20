@@ -21,6 +21,13 @@ class ConcretePersonRepository(PersonRepository):
     def find_by_id(self, person_id: PersonId) -> Optional[Any]:  # type: ignore[override]
         return self._persons.get(person_id)
     
+    def find_by_email(self, email: str) -> Optional[Any]:  # type: ignore[override]
+        """Find person by email address."""
+        for person in self._persons.values():
+            if hasattr(person, 'email') and person.email == email:
+                return person
+        return None
+    
     def find_all(self) -> List[Any]:
         return list(self._persons.values())
 
@@ -67,3 +74,11 @@ class TestPersonRepository:
         # Method should exist
         assert hasattr(repository, 'find_all')
         assert callable(getattr(repository, 'find_all'))
+    
+    def test_find_by_email_method_signature(self):
+        """Test find_by_email method has correct signature."""
+        repository = ConcretePersonRepository()
+        
+        # Method should exist
+        assert hasattr(repository, 'find_by_email')
+        assert callable(getattr(repository, 'find_by_email'))
